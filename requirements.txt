@@ -1,2 +1,4 @@
 pycairo
+svg.path==3.0
+
 pylint

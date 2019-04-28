@@ -1,0 +1,7 @@
+[FORMAT]
+good-names=i,j,k,ex,Run,_,pk,x,y,t,p,a,b,c,n,r,g
+docstring-min-length=10
+
+[TYPECHECK]
+
+ignored-modules=cairo
