@@ -38,6 +38,7 @@ paths = [
     parse_path('M109.3,28.6 c0,9 2.1,12.7 7,12.7 c4.8,0 6.9,-3.7 6.9,-12.7 c0,-9 -2.1,-12.6 -6.9,-12.6 C111.4,16 109.3,19.6 109.3,28.6 L109.3,28.6  z M133.2,28.6 c0,12.9 -6.1,20 -16.9,20 c-10.9,0 -17,-7.1 -17,-20 c0,-12.8 6.1,-20 17,-20 C127.1,8.7 133.2,15.8 133.2,28.6 L133.2,28.6  z ')
 ]
 
+tau = 2*math.pi
 def draw(target: cairo.Surface, t: float) -> None:
     ctx = cairo.Context(target)
     ctx.translate(0, 40)
@@ -45,19 +46,22 @@ def draw(target: cairo.Surface, t: float) -> None:
     ctx.set_line_width(0.2)
     ctx.set_source_rgb(0, 0, 0)
 
-    r = 0.5
-    n = 64
+    r = 1
+    n = 128
     for i in range(0, n):
         for path in paths:
             p = path.point(i / n)
             x, y = as_tuple(p)
-            ctx.arc(x, y, r, 0, 2*math.pi)
-            ctx.fill()
             
-            ctx.move_to(x, y)
-            pp = p + normal(path.derivative(i/n) * -1j) * 3
-            ctx.line_to(*as_tuple(pp))
-            ctx.stroke()
+            norm = normal(path.derivative(i/n) * -1j)
+            pp = p + norm * 1 * math.sin(tau*i/n + t)
+
+            ctx.arc(pp.real, pp.imag, r, 0, 2*math.pi)
+            ctx.fill()
+
+            #ctx.move_to(x, y)
+            #ctx.line_to(*as_tuple(pp))
+            #ctx.stroke()
 
     ctx.stroke()
 
@@ -94,7 +98,7 @@ def main():
 
     # Write animation
     with open('output.raw', 'wb') as f:
-        animate(f, 20, 10)
+        animate(f, 50, tau*2)
 
 if __name__ == "__main__":
     main()
