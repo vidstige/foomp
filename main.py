@@ -2,7 +2,7 @@ from itertools import tee
 import math
 
 import cairo
-from svg.path import Path, Line, parse_path
+from svg.path import Path, Line, QuadraticBezier, CubicBezier, parse_path
 
 
 def pairwise(iterable):
@@ -30,19 +30,19 @@ def parse_polygon(points: str) -> Path:
         path.append(Line(complex(*a), complex(*b)))
     return path
 
-
 # > | o
 paths = [
     parse_polygon('63.6,33.3 32.2,46.9 32.2,37.4 55.3,28.5 32.2,19.6 32.2,10.4 63.6,24.2 63.6,33.3'),
     parse_polygon('84.2,0 84.2,57.3 75.1,57.3 75.1,0 84.2,0'),
-    parse_path('M109.3,28.6 c0,9 2.1,12.7 7,12.7 c4.8,0 6.9,-3.7 6.9,-12.7 c0,-9 -2.1,-12.6 -6.9,-12.6 C111.4,16 109.3,19.6 109.3,28.6 L109.3,28.6  z M133.2,28.6 c0,12.9 -6.1,20 -16.9,20 c-10.9,0 -17,-7.1 -17,-20 c0,-12.8 6.1,-20 17,-20 C127.1,8.7 133.2,15.8 133.2,28.6 L133.2,28.6  z ')
+    parse_path('M109.3,28.6 c0,9 2.1,12.7 7,12.7 c4.8,0 6.9,-3.7 6.9,-12.7 c0,-9 -2.1,-12.6 -6.9,-12.6 C111.4,16 109.3,19.6 109.3,28.6 L109.3,28.6  z'),
+    parse_path('M133.2,28.6 c0,12.9 -6.1,20 -16.9,20 c-10.9,0 -17,-7.1 -17,-20 c0,-12.8 6.1,-20 17,-20 C127.1,8.7 133.2,15.8 133.2,28.6 L133.2,28.6  z ')
 ]
 
 tau = 2*math.pi
 def draw(target: cairo.Surface, t: float) -> None:
     ctx = cairo.Context(target)
-    ctx.translate(0, 40)
-    ctx.scale(2, 2)
+    ctx.translate(10, 40)
+    ctx.scale(3, 3)
     ctx.set_line_width(0.2)
     ctx.set_source_rgb(0, 0, 0)
 
@@ -81,9 +81,11 @@ def write(filename: str, t: float):
     draw(surface, t)
     surface.write_to_png(filename)
 
+TWITTER = 506, 253
 
 def animate(f, n, t):
-    width, height = 320, 200
+    #width, height = 320, 200
+    width, height = TWITTER
     surface = cairo.ImageSurface(cairo.Format.RGB24, width, height)
     for i in range(0, n):
         print(i, '/', n)
