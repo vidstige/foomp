@@ -3,6 +3,8 @@ import math
 
 import cairo
 
+from tween import High, Low, LinearIn, LinearOut, Tween
+
 TAU = 2*math.pi
 
 
@@ -49,11 +51,18 @@ def inside(x, y):
     red = image[index]
     return red == 0
 
+TWEEN = Tween(
+    Low(2),
+    LinearIn(5),
+    High(10),
+    LinearOut(5),
+    Low(3))
+
+def lerp(t, a, b):
+    return (t-1) * a + t * b
+
 def reduction(t: float) -> float:
-    if t % 20 > 8:
-        return 0.25
-    return 0.8
-    
+    return lerp(TWEEN(t % len(TWEEN)), 0, 0.75)
 
 def step(dt, t):
     for dot in dots:
@@ -61,8 +70,8 @@ def step(dt, t):
 
         vx, vy = dot.v
         if inside(x, y):
-            vx *= reduction(t)
-            vy *= reduction(t)
+            vx *= (1 - reduction(t))
+            vy *= (1 - reduction(t))
 
         # update position
         dot.p = (x + vx) % 168, (y + vy) % 77
@@ -88,7 +97,7 @@ def animate(f):
     surface = cairo.ImageSurface(cairo.Format.RGB24, width, height)
     t = 0
     dt = 0.1
-    while True:
+    while t < len(TWEEN):
         clear(surface, color=(0, 0, 0))
         step(dt, t)
         t += dt
