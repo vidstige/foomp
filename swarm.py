@@ -27,12 +27,17 @@ class Dot:
         self.v = v
         self.saved = 0, 0
 
+# TWEAK HERE
+SPEED = 1.2
+REDUCTION = 0.3
+RADIUS = 0.5
+DOT_COUNT = 4000
+
 dots = []
-speed = 2
-for _ in range(5000):
+for _ in range(DOT_COUNT):
     dots.append(Dot(
         (random.randint(0, 168), random.randint(0, 77)),
-        (speed*(random.random() - 0.5), speed*(random.random() - 0.5))
+        (SPEED*(random.random() - 0.5), SPEED*(random.random() - 0.5))
     ))
 
 
@@ -41,19 +46,23 @@ def inside(x, y):
         return False
 
     index = (int(x) + 168 * int(y)) * 3
-    #index = int(y) + 77 * 3 * int(x)
     red = image[index]
     return red == 0
 
+def reduction(t: float) -> float:
+    if t % 20 > 8:
+        return 0.25
+    return 0.8
+    
 
-def step(dt):
+def step(dt, t):
     for dot in dots:
         x, y = dot.p
 
         vx, vy = dot.v
         if inside(x, y):
-            vx *= 0.3
-            vy *= 0.3
+            vx *= reduction(t)
+            vy *= reduction(t)
 
         # update position
         dot.p = (x + vx) % 168, (y + vy) % 77
@@ -63,37 +72,34 @@ def draw(target: cairo.Surface) -> None:
     ctx = cairo.Context(target)
     ctx.scale(506/168, 253/77)
     ctx.set_line_width(1)
-    ctx.set_source_rgba(1, 1, 1, 0.2)
+    ctx.set_source_rgba(0.92, 0.92, 1, 0.2)
 
-    r = 0.8
     for dot in dots:
         x, y = dot.p     
-        ctx.arc(x, y, r, 0, 2 * math.pi)
+        ctx.arc(x, y, RADIUS, 0, 2 * math.pi)
         ctx.fill()
 
 
 TWITTER = 506, 253
 
-def animate(f, n, t):
+def animate(f):
     #width, height = 320, 200
     width, height = TWITTER
     surface = cairo.ImageSurface(cairo.Format.RGB24, width, height)
-    #for i in range(0, n):
+    t = 0
+    dt = 0.1
     while True:
-        #print(i, '/', n)
         clear(surface, color=(0, 0, 0))
-        step(0.1)
+        step(dt, t)
+        t += dt
         draw(surface)
         f.write(surface.get_data())
 
 
 def main():
-    # Write a single frame
-    #write('output.png', t=0)
-
     # Write animation
     import sys
-    animate(sys.stdout.buffer, 100, TAU*4)
+    animate(sys.stdout.buffer)
 
 if __name__ == "__main__":
     main()
