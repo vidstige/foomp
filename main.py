@@ -2,8 +2,9 @@ from itertools import tee
 import math
 
 import cairo
-from svg.path import Path, Line, QuadraticBezier, CubicBezier, parse_path
+from svg.path import Path, Line, parse_path
 
+from tween import Tween, QuadraticIn, QuadraticOut, Low
 
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
@@ -34,36 +35,59 @@ def parse_polygon(points: str) -> Path:
 paths = [
     parse_polygon('63.6,33.3 32.2,46.9 32.2,37.4 55.3,28.5 32.2,19.6 32.2,10.4 63.6,24.2 63.6,33.3'),
     parse_polygon('84.2,0 84.2,57.3 75.1,57.3 75.1,0 84.2,0'),
-    parse_path('M109.3,28.6 c0,9 2.1,12.7 7,12.7 c4.8,0 6.9,-3.7 6.9,-12.7 c0,-9 -2.1,-12.6 -6.9,-12.6 C111.4,16 109.3,19.6 109.3,28.6 L109.3,28.6  z'),
-    parse_path('M133.2,28.6 c0,12.9 -6.1,20 -16.9,20 c-10.9,0 -17,-7.1 -17,-20 c0,-12.8 6.1,-20 17,-20 C127.1,8.7 133.2,15.8 133.2,28.6 L133.2,28.6  z ')
+    parse_path('M109.3,28.6 c0,9 2.1,12.7 7,12.7 c4.8,0 6.9,-3.7 6.9,-12.7 c0,-9 -2.1,-12.6 -6.9,-12.6 C111.4,16 109.3,19.6 109.3,28.6 L109.3,28.6  z M133.2,28.6 c0,12.9 -6.1,20 -16.9,20 c-10.9,0 -17,-7.1 -17,-20 c0,-12.8 6.1,-20 17,-20 C127.1,8.7 133.2,15.8 133.2,28.6 L133.2,28.6  z '),
 ]
 
-tau = 2*math.pi
+TAU = 2*math.pi
+BUGLE = 0.5
+TWEEN = Tween(
+    QuadraticIn(BUGLE), QuadraticOut(BUGLE),
+    Low((TAU - BUGLE*4) / 2),
+    QuadraticIn(BUGLE), QuadraticOut(BUGLE),
+    Low((TAU - BUGLE*4) / 2))
+
+
 def draw(target: cairo.Surface, t: float) -> None:
+#    def f(t: float) -> float:
+#        return ((math.sin(t) + math.sin(t / 2)) + 1) / 2
+    def f(p, t) -> float:
+        x, y = p.real, p.imag
+        return math.sin((0.2*x + 0.1*y)*0.5 + t*2)
+
     ctx = cairo.Context(target)
     ctx.translate(10, 40)
     ctx.scale(3, 3)
-    ctx.set_line_width(0.2)
-    ctx.set_source_rgb(0, 0, 0)
+    ctx.set_line_width(1)
 
-    r = 1
-    n = 128
-    for i in range(0, n):
-        for path in paths:
+    displacement = 0.5
+    n = 512
+    for path in paths:
+        p = path.point(0)
+        norm = normal(path.derivative(0) * -1j)
+        pp = p + norm * displacement * f(p, t)
+        #pp = p + norm * displacement * TWEEN(t % TWEEN.duration())
+        
+        ctx.move_to(*as_tuple(pp))
+
+        prev = 0
+        for i in range(1, n):
+            tt = TAU*i/n + t
+        
             p = path.point(i / n)
-            x, y = as_tuple(p)
             
             norm = normal(path.derivative(i/n) * -1j)
-            pp = p + norm * 1 * math.sin(tau*i/n + t)
+            #pp = p + norm * displacement * TWEEN(tt % TWEEN.duration())
+            pp = p + norm * displacement * f(p, t)
 
-            ctx.arc(pp.real, pp.imag, r, 0, 2*math.pi)
-            ctx.fill()
+            if path.lift(prev, i/n):
+                ctx.move_to(*as_tuple(pp))
+            else:
+                ctx.line_to(*as_tuple(pp))
 
-            #ctx.move_to(x, y)
-            #ctx.line_to(*as_tuple(pp))
-            #ctx.stroke()
+            prev = i/n
 
-    ctx.stroke()
+        ctx.set_source_rgb(0, 0, 0)
+        ctx.fill()
 
 
 def clear(target: cairo.ImageSurface, color=(1, 1, 1)) -> None:
@@ -100,7 +124,7 @@ def main():
 
     # Write animation
     with open('output.raw', 'wb') as f:
-        animate(f, 50, tau*2)
+        animate(f, 50, TAU)
 
 if __name__ == "__main__":
     main()

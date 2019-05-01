@@ -1,3 +1,4 @@
+import math
 from typing import Callable
 
 
@@ -12,6 +13,19 @@ def high(t: float) -> float:
 
 def low(t: float) -> float:
     return 0
+
+def sin_inout(t: float) -> float:
+    if t < 0 or t > 1:
+        print(t)
+    return math.sin(math.pi * t)
+
+def quadratic(t: float):
+    return t*t * (3.0 - 2.0 * t)
+
+def reverse(f: Callable[[float], float]) -> Callable[[float], float]:
+    def wrapper(t: float) -> float:
+        return f(1 - t)
+    return wrapper
 
 class Segment:
     def __init__(self, duration: float, f: Callable[[float], float]):
@@ -43,6 +57,25 @@ class Low(Segment):
             f=low)
 
 
+class SinInOut(Segment):
+    def __init__(self, duration: float):
+        super().__init__(
+            duration=duration,
+            f=sin_inout)
+
+class QuadraticIn(Segment):
+    def __init__(self, duration: float):
+        super().__init__(
+            duration=duration,
+            f=quadratic)
+
+class QuadraticOut(Segment):
+    def __init__(self, duration: float):
+        super().__init__(
+            duration=duration,
+            f=reverse(quadratic))
+
+
 class Tween:
     def __init__(self, *segments):
         self.segments = segments
@@ -65,5 +98,5 @@ class Tween:
         segment, normalized_t = self._find_segment(t)
         return segment.tween(normalized_t)
 
-    def __len__(self) -> float:
+    def duration(self) -> float:
         return sum(segment.duration for segment in self.segments)

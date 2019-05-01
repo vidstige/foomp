@@ -62,7 +62,7 @@ def lerp(t, a, b):
     return (t-1) * a + t * b
 
 def reduction(t: float) -> float:
-    return lerp(TWEEN(t % len(TWEEN)), 0, 0.75)
+    return lerp(TWEEN(t % TWEEN.duration()), 0, 0.75)
 
 def step(dt, t):
     for dot in dots:
@@ -97,7 +97,7 @@ def animate(f):
     surface = cairo.ImageSurface(cairo.Format.RGB24, width, height)
     t = 0
     dt = 0.1
-    while t < len(TWEEN):
+    while t < TWEEN.duration():
         clear(surface, color=(0, 0, 0))
         step(dt, t)
         t += dt
