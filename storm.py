@@ -20,7 +20,8 @@ def draw_field(ctx: cairo.Context, resolution: Resolution, field):
     n = 10
     w, h = resolution
     xx, yy = np.meshgrid(np.linspace(-w, w, n), np.linspace(-h, h, n))
-    vvx, vvy = field(xx, yy)
+    zz = np.zeros(xx.shape)
+    vvx, vvy, _ = field(xx, yy, zz)
     scale = 0.05
     for x, y, vx, vy in zip(xx.flat, yy.flat, vvx.flat, vvy.flat):
         ctx.move_to(x, y)
@@ -29,22 +30,27 @@ def draw_field(ctx: cairo.Context, resolution: Resolution, field):
 
     ctx.restore()
 
-def swirl(xx, yy):
-    return yy, -xx
+def swirl(xx, yy, zz):
+    return yy, -xx, np.zeros(zz.shape)
 
-def inward(xx, yy):
-    return -xx, -yy
+def inward(xx, yy, zz):
+    return -xx, -yy, np.zeros(zz.shape)
 
 
 class Storm:
     def __init__(self):
         N = 500
         self.model = pygl.Model.load_obj('left.obj')
-        self.positions = np.random.randn(N, 2)
-        self.velocities = np.zeros((N, 2))
+        self.positions = 3 * self.model.vertices
+        self.velocities = np.zeros(self.positions.shape)
+        self.field = swirl
 
     def step(self, dt):
         self.positions += self.velocities * dt
+        # evaluate vector field at positions
+        xx, yy, zz = np.hsplit(self.positions, 3)
+        v = self.field(xx, yy, zz)
+        self.velocities = np.hstack(v)
 
     def draw(self, target: cairo.Surface, resolution: Resolution):
         ctx = cairo.Context(target)
@@ -54,12 +60,12 @@ class Storm:
         ctx.translate(0.5*w, 0.5*h)
         ctx.scale(scale, scale)
 
-        for x, y in self.positions:
+        for x, y, z in self.positions:
             ctx.move_to(x, y)
             ctx.arc(x, y, 0.02, 0, TAU)
             ctx.fill()
 
-        draw_field(ctx, (1, 1), field=inward)
+        draw_field(ctx, (1, 1), field=self.field)
 
 def main():
     try:
