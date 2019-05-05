@@ -6,50 +6,69 @@ import math
 import cairo
 import numpy as np
 from foomp import animate, TAU
+import pygl
+
+DELTA_T = 0.01
 
 Resolution = Tuple[int, int]
 
-N = 500
-dots = [(random(), random()) for _ in range(N)]
 
 def draw_field(ctx: cairo.Context, resolution: Resolution, field):
     ctx.save()
 
+    ctx.set_line_width(0.01)
     n = 10
     w, h = resolution
-    xx, yy = np.meshgrid(np.linspace(0, w, 10), np.linspace(0, h, n))
-    vv = field(xx, yy)
-    for x, y, v in zip(xx.flat, yy.flat, vv.flat):
-        print(x, y, v, file=sys.stderr)
+    xx, yy = np.meshgrid(np.linspace(-w, w, n), np.linspace(-h, h, n))
+    vvx, vvy = field(xx, yy)
+    scale = 0.05
+    for x, y, vx, vy in zip(xx.flat, yy.flat, vvx.flat, vvy.flat):
         ctx.move_to(x, y)
-        ctx.arc(x, y, 0.02, 0, TAU)
-        ctx.fill()
+        ctx.line_to(x + scale * vx, y + scale * vy)
+        ctx.stroke()
 
     ctx.restore()
 
-def lol(xx, yy):
-    return np.ones(xx.shape)
+def swirl(xx, yy):
+    return yy, -xx
 
-def draw(target: cairo.Surface, resolution, t: float):
-    ctx = cairo.Context(target)
-    ctx.set_source_rgba(0.92, 0.92, 1, 0.8)
-    w, h = resolution
-    scale = min(w, h) / 2
-    ctx.translate(0.5*w, 0.5*h)
-    ctx.scale(scale, scale)
+def inward(xx, yy):
+    return -xx, -yy
 
-    for a, r in dots:
-        b = 0.05*t / (0.1 + r) + a
-        x, y = r*math.cos(b * TAU), r*math.sin(b*TAU)
-        ctx.move_to(x, y)
-        ctx.arc(x, y, 0.02, 0, TAU)
-        ctx.fill()
-    
-    draw_field(ctx, (1, 1), field=lol)
+
+class Storm:
+    def __init__(self):
+        N = 500
+        self.model = pygl.Model.load_obj('left.obj')
+        self.positions = np.random.randn(N, 2)
+        self.velocities = np.zeros((N, 2))
+
+    def step(self, dt):
+        self.positions += self.velocities * dt
+
+    def draw(self, target: cairo.Surface, resolution: Resolution):
+        ctx = cairo.Context(target)
+        ctx.set_source_rgba(0.92, 0.92, 1, 0.8)
+        w, h = resolution
+        scale = min(w, h) / 2
+        ctx.translate(0.5*w, 0.5*h)
+        ctx.scale(scale, scale)
+
+        for x, y in self.positions:
+            ctx.move_to(x, y)
+            ctx.arc(x, y, 0.02, 0, TAU)
+            ctx.fill()
+
+        draw_field(ctx, (1, 1), field=inward)
 
 def main():
     try:
-        animate(sys.stdout.buffer, draw)
+        storm = Storm()
+        animate(
+            sys.stdout.buffer,
+            DELTA_T,
+            storm.draw,
+            storm.step)
     except BrokenPipeError:
         pass
 
