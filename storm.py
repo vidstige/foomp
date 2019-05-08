@@ -34,16 +34,13 @@ def draw_field_2d(ctx: cairo.Context, resolution: Resolution, field: Field):
 
 def draw_arrows(ctx: cairo.Context, from_points: np.array, to_points: np.array, scale: float):
     ctx.save()
-    ctx.set_line_width(0.02)
+    ctx.set_line_width(0.01)
     for point, arrow in zip(from_points, to_points):
         x, y, _ = point
         dx, dy, _ = arrow
         ctx.move_to(x, y)
-        ctx.arc(x, -y, 0.02, 0, TAU)
-        ctx.fill()
-
-        #ctx.line_to(x + scale * dx, y + scale * dy)
-        #ctx.stroke()
+        ctx.line_to(x + scale * dx, y + scale * dy)
+        ctx.stroke()
     ctx.restore()
 
 
@@ -60,21 +57,23 @@ class Storm:
         N = 500
         self.model = pygl.Model.load_obj('left.obj')
         self.positions = 3 * self.model.vertices
-        self.velocities = np.zeros(self.positions.shape)
-        self.field = swirl
+        #self.velocities = np.zeros(self.positions.shape)
+        #self.field = swirl
+    
+    def velocities(self, positions, t):
+        xx, yy, zz = np.hsplit(positions, 3)
+        return swirl(xx, yy, zz)
 
     def step(self, dt):
         self.t += dt
-        self.positions += self.velocities * dt
-        # evaluate vector field at positions
-        xx, yy, zz = np.hsplit(self.positions, 3)
-        v = self.field(xx, yy, zz)
-        self.velocities = np.hstack(v)
+        v = self.velocities(self.positions, self.t)
+        self.positions += dt * np.hstack(v)
 
     def camera(self) -> np.array:
+        t = 0.1 * self.t
         target = np.array([0, 0, 0])
         up = np.array([0, 0, 1])
-        eye = np.array([5*math.cos(self.t), 5*math.sin(self.t), 2])
+        eye = np.array([2*math.cos(t), 2*math.sin(t), -3])
         return numgl.lookat(eye, target, up)
 
     def draw(self, target: cairo.Surface, resolution: Resolution):
@@ -86,29 +85,28 @@ class Storm:
         ctx.scale(scale, scale)
 
         projection = np.dot(
-            numgl.perspective(120, h/w, 0.1, 5),
+            numgl.perspective(110, h/w, 0.1, 5),
             self.camera())
         #print(projection, file=sys.stderr)
         screen = pygl.transform(projection, self.positions)
         #normal_transform = np.linalg.inv(projection).T
 
         for x, y, z in screen:
-            pass
-            #ctx.move_to(x, y)
-            #ctx.arc(x, y, 0.02, 0, TAU)
-            #ctx.fill()
+            ctx.move_to(x, -y)
+            ctx.arc(x, -y, 0.02, 0, TAU)
+            ctx.fill()
 
         # draw field
         # 1. evaluate field at grid extending -s,s in all direction at n points
-        s = 1
-        n = 10
+        s = 0.7
+        n = 8
         xx, yy, zz = np.meshgrid(
             np.linspace(-s, s, n),
             np.linspace(-s, s, n),
             np.linspace(-s, s, n)
         )
         from_raw = np.vstack((xx.flat, yy.flat, zz.flat))
-        to_raw = from_raw + np.vstack([a.flat for a in self.field(xx, yy, zz)])
+        to_raw = from_raw + np.vstack([a.flat for a in swirl(xx, yy, zz)])
         from_points = pygl.transform(projection, from_raw.T)
         to_points = pygl.transform(projection, to_raw.T)
 
