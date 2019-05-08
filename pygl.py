@@ -120,9 +120,22 @@ def get_screen(ndc: np.array, shape: Tuple) -> np.array:
     return center + np.multiply(ndc, scale)
 
 
+def extend(vertices: np.array) -> np.array:
+    return np.hstack([vertices, np.ones((len(vertices), 1))])
+
+
+def to_screen(points: np.array) -> np.array:
+    W = points[:, 3]
+    return np.divide(points[:, :3], W[:, None])
+
+
+def transform(matrix: np.array, vertices: np.array) -> np.array:
+    return to_screen(np.dot(matrix, extend(vertices).T).T)
+
+
 def render(img: np.array, model: Model, projection: np.array):
     # transform points to camera space
-    camera_vertices = (projection * np.vstack((model.vertices.T, np.ones((1,12))))).T
+    camera_vertices = (projection * extend(model.vertices).T).T
     normal_transform = np.linalg.inv(projection).T
 
     # divide and scale into screen space

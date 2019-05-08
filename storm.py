@@ -1,21 +1,22 @@
 import sys
-from typing import Tuple
+from typing import Callable, Tuple
 from random import random
 import math
 
 import cairo
 import numpy as np
 from foomp import animate, TAU
+import numgl
 import pygl
 
 DELTA_T = 0.01
 
 Resolution = Tuple[int, int]
+Field = Callable[[np.array, np.array, np.array], np.array]
 
 
-def draw_field(ctx: cairo.Context, resolution: Resolution, field):
+def draw_field_2d(ctx: cairo.Context, resolution: Resolution, field: Field):
     ctx.save()
-
     ctx.set_line_width(0.01)
     n = 10
     w, h = resolution
@@ -30,6 +31,22 @@ def draw_field(ctx: cairo.Context, resolution: Resolution, field):
 
     ctx.restore()
 
+
+def draw_arrows(ctx: cairo.Context, from_points: np.array, to_points: np.array, scale: float):
+    ctx.save()
+    ctx.set_line_width(0.02)
+    for point, arrow in zip(from_points, to_points):
+        x, y, _ = point
+        dx, dy, _ = arrow
+        ctx.move_to(x, y)
+        ctx.arc(x, -y, 0.02, 0, TAU)
+        ctx.fill()
+
+        #ctx.line_to(x + scale * dx, y + scale * dy)
+        #ctx.stroke()
+    ctx.restore()
+
+
 def swirl(xx, yy, zz):
     return yy, -xx, np.zeros(zz.shape)
 
@@ -39,6 +56,7 @@ def inward(xx, yy, zz):
 
 class Storm:
     def __init__(self):
+        self.t = 0
         N = 500
         self.model = pygl.Model.load_obj('left.obj')
         self.positions = 3 * self.model.vertices
@@ -46,11 +64,18 @@ class Storm:
         self.field = swirl
 
     def step(self, dt):
+        self.t += dt
         self.positions += self.velocities * dt
         # evaluate vector field at positions
         xx, yy, zz = np.hsplit(self.positions, 3)
         v = self.field(xx, yy, zz)
         self.velocities = np.hstack(v)
+
+    def camera(self) -> np.array:
+        target = np.array([0, 0, 0])
+        up = np.array([0, 0, 1])
+        eye = np.array([5*math.cos(self.t), 5*math.sin(self.t), 2])
+        return numgl.lookat(eye, target, up)
 
     def draw(self, target: cairo.Surface, resolution: Resolution):
         ctx = cairo.Context(target)
@@ -60,12 +85,34 @@ class Storm:
         ctx.translate(0.5*w, 0.5*h)
         ctx.scale(scale, scale)
 
-        for x, y, z in self.positions:
-            ctx.move_to(x, y)
-            ctx.arc(x, y, 0.02, 0, TAU)
-            ctx.fill()
+        projection = np.dot(
+            numgl.perspective(120, h/w, 0.1, 5),
+            self.camera())
+        #print(projection, file=sys.stderr)
+        screen = pygl.transform(projection, self.positions)
+        #normal_transform = np.linalg.inv(projection).T
 
-        draw_field(ctx, (1, 1), field=self.field)
+        for x, y, z in screen:
+            pass
+            #ctx.move_to(x, y)
+            #ctx.arc(x, y, 0.02, 0, TAU)
+            #ctx.fill()
+
+        # draw field
+        # 1. evaluate field at grid extending -s,s in all direction at n points
+        s = 1
+        n = 10
+        xx, yy, zz = np.meshgrid(
+            np.linspace(-s, s, n),
+            np.linspace(-s, s, n),
+            np.linspace(-s, s, n)
+        )
+        from_raw = np.vstack((xx.flat, yy.flat, zz.flat))
+        to_raw = from_raw + np.vstack([a.flat for a in self.field(xx, yy, zz)])
+        from_points = pygl.transform(projection, from_raw.T)
+        to_points = pygl.transform(projection, to_raw.T)
+
+        draw_arrows(ctx, from_points, to_points, scale=0.25)
 
 def main():
     try:
