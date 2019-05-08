@@ -65,15 +65,25 @@ class Storm:
         return swirl(xx, yy, zz)
 
     def step(self, dt):
+        p = self.positions
+        def v(pp, tt):
+            return np.hstack(self.velocities(pp, tt))
+        t = self.t
+
+        k1 = dt * v(p, t)
+        k2 = dt * v(p + 0.5 * k1, t + 0.5*dt)
+        k3 = dt * v(p + 0.5 * k2, t + 0.5*dt)
+        k4 = dt * v(p + k3, t + dt)
+        self.positions = p + (k1 + 2*k2 + 2*k3 + k4) / 6
+        #v = self.velocities(self.positions, self.t)
+        #self.positions += dt * v
         self.t += dt
-        v = self.velocities(self.positions, self.t)
-        self.positions += dt * np.hstack(v)
 
     def camera(self) -> np.array:
         t = 0.1 * self.t
         target = np.array([0, 0, 0])
         up = np.array([0, 0, 1])
-        eye = np.array([2*math.cos(t), 2*math.sin(t), -3])
+        eye = np.array([math.cos(t), math.sin(t), -2])
         return numgl.lookat(eye, target, up)
 
     def draw(self, target: cairo.Surface, resolution: Resolution):
