@@ -8,6 +8,7 @@ import numpy as np
 from foomp import animate, TAU
 import numgl
 import pygl
+import tween
 
 DELTA_T = 0.01
 
@@ -34,7 +35,7 @@ def draw_field_2d(ctx: cairo.Context, resolution: Resolution, field: Field):
 
 def draw_arrows(ctx: cairo.Context, from_points: np.array, to_points: np.array, scale: float):
     ctx.save()
-    ctx.set_line_width(0.01)
+    ctx.set_line_width(0.1)
     for point, arrow in zip(from_points, to_points):
         x, y, _ = point
         dx, dy, _ = arrow
@@ -43,26 +44,34 @@ def draw_arrows(ctx: cairo.Context, from_points: np.array, to_points: np.array, 
         ctx.stroke()
     ctx.restore()
 
-
 def swirl(xx, yy, zz):
     return yy, -xx, np.zeros(zz.shape)
 
 def inward(xx, yy, zz):
     return -xx, -yy, np.zeros(zz.shape)
 
-
 class Storm:
     def __init__(self):
         self.t = 0
         N = 500
         self.model = pygl.Model.load_obj('left.obj')
-        self.positions = 3 * self.model.vertices
+        self.original = 3 * self.model.vertices
+        self.positions = 0.5* np.random.randn(*self.original.shape)
         #self.velocities = np.zeros(self.positions.shape)
         #self.field = swirl
+        self.tween = tween.Tween(
+            tween.Low(5),
+            tween.QuadraticIn(3),
+            tween.High(5))
+        
+    def towards(self, positions):
+        """Vector field that sends particles towards original"""
+        return self.original - positions
     
     def velocities(self, positions, t):
-        xx, yy, zz = np.hsplit(positions, 3)
-        return swirl(xx, yy, zz)
+        #xx, yy, zz = np.hsplit(positions, 3)
+        #return swirl(xx, yy, zz)
+        return np.hsplit(self.towards(positions), 3)
 
     def step(self, dt):
         p = self.positions
@@ -120,7 +129,7 @@ class Storm:
         from_points = pygl.transform(projection, from_raw.T)
         to_points = pygl.transform(projection, to_raw.T)
 
-        draw_arrows(ctx, from_points, to_points, scale=0.25)
+        draw_arrows(ctx, from_points, to_points, scale=0.002)
 
 def main():
     try:
