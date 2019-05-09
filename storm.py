@@ -1,3 +1,4 @@
+import json
 import sys
 from typing import Callable, Tuple
 from random import random
@@ -14,6 +15,24 @@ DELTA_T = 0.1
 
 Resolution = Tuple[int, int]
 Field = Callable[[np.array, np.array, np.array], np.array]
+
+
+def load_data(reconstruction_urnhash: str) -> np.array:
+    with open('data/{}/scene.json'.format(reconstruction_urnhash)) as f:
+        scene = json.load(f)
+    left_transform = np.array(scene['world_from_foot']['left'])
+    right_transform = np.array(scene['world_from_foot']['right'])
+
+    filename = 'data/{}/left.obj'.format(reconstruction_urnhash)
+    left = pygl.Model.load_obj(filename)
+
+    filename = 'data/{}/right.obj'.format(reconstruction_urnhash)
+    right = pygl.Model.load_obj(filename)
+
+    return np.vstack([
+        pygl.transform(left_transform, left.vertices),
+        pygl.transform(right_transform, right.vertices),
+    ])
 
 
 def draw_field_2d(ctx: cairo.Context, resolution: Resolution, field: Field):
@@ -54,8 +73,7 @@ class Storm:
     def __init__(self):
         self.t = 0
         N = 500
-        self.model = pygl.Model.load_obj('left.obj')
-        self.original = self.model.vertices
+        self.original = load_data('498427efb606b127a8adcc7027a84672e6b3d364a5556c8c6e94a77a2f794a34')
         self.positions = 0.1 * np.random.randn(*self.original.shape)
         #self.velocities = np.zeros(self.positions.shape)
         #self.field = swirl
