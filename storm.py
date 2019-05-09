@@ -69,6 +69,7 @@ class Storm:
         return self.original - positions
     
     def velocities(self, positions, t):
+        del t  # time invariant
         #xx, yy, zz = np.hsplit(positions, 3)
         #return swirl(xx, yy, zz)
         return np.hsplit(self.towards(positions), 3)
