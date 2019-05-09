@@ -10,7 +10,7 @@ import numgl
 import pygl
 import tween
 
-DELTA_T = 0.01
+DELTA_T = 0.1
 
 Resolution = Tuple[int, int]
 Field = Callable[[np.array, np.array, np.array], np.array]
@@ -60,8 +60,8 @@ class Storm:
         #self.velocities = np.zeros(self.positions.shape)
         #self.field = swirl
         self.tween = tween.Tween(
-            tween.Low(5),
-            tween.QuadraticIn(3),
+            tween.Low(4),
+            tween.QuadraticIn(7),
             tween.High(5))
         
     def towards(self, positions):
@@ -69,10 +69,10 @@ class Storm:
         return self.original - positions
     
     def velocities(self, positions, t):
-        del t  # time invariant
-        #xx, yy, zz = np.hsplit(positions, 3)
-        #return swirl(xx, yy, zz)
-        return np.hsplit(self.towards(positions), 3)
+        s = self.tween(t)
+        xx, yy, zz = np.hsplit(positions, 3)
+        field = np.hstack(swirl(xx, yy, zz))
+        return np.hsplit((1-s) * field + s * self.towards(positions), 3)
 
     def step(self, dt):
         p = self.positions
