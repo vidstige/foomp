@@ -55,8 +55,8 @@ class Storm:
         self.t = 0
         N = 500
         self.model = pygl.Model.load_obj('left.obj')
-        self.original = 3 * self.model.vertices
-        self.positions = 0.5* np.random.randn(*self.original.shape)
+        self.original = self.model.vertices
+        self.positions = 0.1 * np.random.randn(*self.original.shape)
         #self.velocities = np.zeros(self.positions.shape)
         #self.field = swirl
         self.tween = tween.Tween(
@@ -90,18 +90,19 @@ class Storm:
         self.t += dt
 
     def camera(self) -> np.array:
-        t = 0.1 * self.t
+        t = 0.05 * self.t
         target = np.array([0, 0, 0])
         up = np.array([0, 0, 1])
-        eye = np.array([math.cos(t), math.sin(t), -2])
+        r = 1
+        eye = np.array([r * math.cos(t), r * math.sin(t), 0.4])
         return numgl.lookat(eye, target, up)
 
     def draw(self, target: cairo.Surface, resolution: Resolution):
         ctx = cairo.Context(target)
-        ctx.set_source_rgba(0.92, 0.92, 1, 0.8)
+        ctx.set_source_rgba(0.92, 0.72, 1, 0.4)
         w, h = resolution
         scale = min(w, h) / 2
-        ctx.translate(0.5*w, 0.5*h)
+        ctx.translate(0.5 * w, 0.5 * h)
         ctx.scale(scale, scale)
 
         projection = np.dot(
@@ -113,8 +114,11 @@ class Storm:
 
         for x, y, z in screen:
             ctx.move_to(x, -y)
-            ctx.arc(x, -y, 0.02, 0, TAU)
+            ctx.arc(x, -y, 0.01, 0, TAU)
             ctx.fill()
+
+        #print(min(z for _, _, z in screen), file=sys.stderr)
+        #print(max(z for _, _, z in screen), file=sys.stderr)
 
         # draw field
         # 1. evaluate field at grid extending -s,s in all direction at n points
@@ -130,7 +134,7 @@ class Storm:
         from_points = pygl.transform(projection, from_raw.T)
         to_points = pygl.transform(projection, to_raw.T)
 
-        draw_arrows(ctx, from_points, to_points, scale=0.002)
+        #draw_arrows(ctx, from_points, to_points, scale=0.002)
 
 def main():
     try:
