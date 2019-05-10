@@ -63,8 +63,8 @@ def draw_arrows(ctx: cairo.Context, from_points: np.array, to_points: np.array, 
         ctx.stroke()
     ctx.restore()
 
-def swirl(xx, yy, zz):
-    return yy, -xx, np.zeros(zz.shape)
+def swirl(xx, yy, zz, strength=1):
+    return strength*yy, -strength * xx, np.zeros(zz.shape)
 
 def inward(xx, yy, zz):
     return -xx, -yy, np.zeros(zz.shape)
@@ -78,18 +78,18 @@ class Storm:
         #self.velocities = np.zeros(self.positions.shape)
         #self.field = swirl
         self.tween = tween.Tween(
-            tween.Low(4),
-            tween.QuadraticIn(7),
+            tween.Low(1),
+            tween.QuadraticIn(5),
             tween.High(5))
-        
+
     def towards(self, positions):
         """Vector field that sends particles towards original"""
         return self.original - positions
-    
+
     def velocities(self, positions, t):
         s = self.tween(t)
         xx, yy, zz = np.hsplit(positions, 3)
-        field = np.hstack(swirl(xx, yy, zz))
+        field = np.hstack(swirl(xx, yy, zz, 2))
         return np.hsplit((1-s) * field + s * self.towards(positions), 3)
 
     def step(self, dt):
@@ -108,11 +108,12 @@ class Storm:
         self.t += dt
 
     def camera(self) -> np.array:
-        t = 0.05 * self.t
+        t = 0.15 * self.t
         target = np.array([0, 0, 0])
         up = np.array([0, 0, 1])
-        r = 1
-        eye = np.array([r * math.cos(t), r * math.sin(t), 0.4])
+        #r = 0.8 - 0.5 * self.tween(t)
+        r = 0.7
+        eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3])
         return numgl.lookat(eye, target, up)
 
     def draw(self, target: cairo.Surface, resolution: Resolution):
@@ -124,7 +125,7 @@ class Storm:
         ctx.scale(scale, scale)
 
         projection = np.dot(
-            numgl.perspective(110, h/w, 0.1, 5),
+            numgl.perspective(90, 1, 0.1, 5),
             self.camera())
         #print(projection, file=sys.stderr)
         screen = pygl.transform(projection, self.positions)
