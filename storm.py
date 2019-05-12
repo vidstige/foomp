@@ -63,20 +63,22 @@ def draw_arrows(ctx: cairo.Context, from_points: np.array, to_points: np.array, 
         ctx.stroke()
     ctx.restore()
 
-def swirl(xx, yy, zz, strength=1):
-    return strength*yy, -strength * xx, np.zeros(zz.shape)
+def swirl(p: np.array, strength=1) -> np.array:
+    xx, yy, zz = p.T
+    return np.vstack([
+        strength*yy,
+        -strength * xx,
+        np.zeros(zz.shape)]).T
 
-def inward(xx, yy, zz):
-    return -xx, -yy, np.zeros(zz.shape)
+def inward(p: np.array) -> np.array:
+    xx, yy, zz = p.T
+    return np.vstack(-xx, -yy, np.zeros(zz.shape)).T
 
 class Storm:
     def __init__(self):
         self.t = 0
-        N = 500
         self.original = load_data('498427efb606b127a8adcc7027a84672e6b3d364a5556c8c6e94a77a2f794a34')
         self.positions = 0.1 * np.random.randn(*self.original.shape)
-        #self.velocities = np.zeros(self.positions.shape)
-        #self.field = swirl
         self.tween = tween.Tween(
             tween.Low(1),
             tween.QuadraticIn(5),
@@ -88,14 +90,12 @@ class Storm:
 
     def velocities(self, positions, t):
         s = self.tween(t)
-        xx, yy, zz = np.hsplit(positions, 3)
-        field = np.hstack(swirl(xx, yy, zz, 2))
-        return np.hsplit((1-s) * field + s * self.towards(positions), 3)
+        field = swirl(positions, strength=2)
+        return (1-s) * field + s * self.towards(positions)
 
     def step(self, dt):
         p = self.positions
-        def v(pp, tt):
-            return np.hstack(self.velocities(pp, tt))
+        v = self.velocities
         t = self.t
 
         k1 = dt * v(p, t)
@@ -141,17 +141,17 @@ class Storm:
 
         # draw field
         # 1. evaluate field at grid extending -s,s in all direction at n points
-        s = 0.7
-        n = 8
-        xx, yy, zz = np.meshgrid(
-            np.linspace(-s, s, n),
-            np.linspace(-s, s, n),
-            np.linspace(-s, s, n)
-        )
-        from_raw = np.vstack((xx.flat, yy.flat, zz.flat))
-        to_raw = from_raw + np.vstack([a.flat for a in swirl(xx, yy, zz)])
-        from_points = pygl.transform(projection, from_raw.T)
-        to_points = pygl.transform(projection, to_raw.T)
+        #s = 0.7
+        #n = 8
+        #xx, yy, zz = np.meshgrid(
+        #    np.linspace(-s, s, n),
+        #    np.linspace(-s, s, n),
+        #    np.linspace(-s, s, n)
+        #)
+        #from_raw = np.vstack((xx.flat, yy.flat, zz.flat)).T
+        #to_raw = from_raw + swirl(from_raw)
+        #from_points = pygl.transform(projection, from_raw.T)
+        #to_points = pygl.transform(projection, to_raw.T)
 
         #draw_arrows(ctx, from_points, to_points, scale=0.002)
 
