@@ -2,11 +2,8 @@ import math
 from typing import Callable
 
 
-def linear_in(t: float) -> float:
+def linear(t: float) -> float:
     return t
-
-def linear_out(t: float) -> float:
-    return 1 - t
 
 def high(t: float) -> float:
     return 1
@@ -36,13 +33,13 @@ class LinearIn(Segment):
     def __init__(self, duration: float):
         super().__init__(
             duration=duration,
-            f=linear_in)
+            f=linear)
 
 class LinearOut(Segment):
     def __init__(self, duration: float):
         super().__init__(
             duration=duration,
-            f=linear_out)
+            f=reverse(linear))
 
 class High(Segment):
     def __init__(self, duration: float):
