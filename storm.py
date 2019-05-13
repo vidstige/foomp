@@ -74,24 +74,32 @@ def inward(p: np.array) -> np.array:
     xx, yy, zz = p.T
     return np.vstack(-xx, -yy, np.zeros(zz.shape)).T
 
+
+def towards(p: np.array, target: np.array) -> np.array:
+    """Vector field that sends particles towards target"""
+    return target - p
+
+
 class Storm:
     def __init__(self):
         self.t = 0
         self.original = load_data('498427efb606b127a8adcc7027a84672e6b3d364a5556c8c6e94a77a2f794a34')
+
+        # particles at rest on floor (z=0)
+        self.initial = 0.1 * np.random.randn(*self.original.shape)
+        self.initial[:, 2] = 0
+
         self.positions = 0.1 * np.random.randn(*self.original.shape)
+
         self.tween = tween.Tween(
             tween.Low(1),
             tween.QuadraticIn(5),
             tween.High(5))
 
-    def towards(self, positions):
-        """Vector field that sends particles towards original"""
-        return self.original - positions
-
     def velocities(self, positions, t):
         s = self.tween(t)
         field = swirl(positions, strength=2)
-        return (1-s) * field + s * self.towards(positions)
+        return (1-s) * field + s * towards(positions, target=self.original)
 
     def step(self, dt):
         p = self.positions
