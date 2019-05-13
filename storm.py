@@ -1,4 +1,5 @@
 import json
+from functools import partial
 import sys
 from typing import Callable, Tuple
 from random import random
@@ -71,13 +72,19 @@ def swirl(p: np.array, strength=1) -> np.array:
         np.zeros(zz.shape)]).T
 
 def inward(p: np.array) -> np.array:
-    xx, yy, zz = p.T
-    return np.vstack(-xx, -yy, np.zeros(zz.shape)).T
+    #xx, yy, zz = p.T
+    #return np.vstack([-xx, -yy, np.zeros(zz.shape)]).T
+    return -p
 
 
-def towards(p: np.array, target: np.array) -> np.array:
+def towards(p: np.array, target: np.array, strength=1) -> np.array:
     """Vector field that sends particles towards target"""
-    return target - p
+    return strength * (target - p)
+
+
+def normalize(x: np.array) -> np.array:
+    """Normalize row wise"""
+    return x / np.sqrt((x * x).sum(axis=1))[:, None]
 
 
 class Storm:
@@ -89,17 +96,34 @@ class Storm:
         self.initial = 0.1 * np.random.randn(*self.original.shape)
         self.initial[:, 2] = 0
 
-        self.positions = 0.1 * np.random.randn(*self.original.shape)
+        #self.positions = 
+        self.cloud = 0.1 * np.random.randn(*self.original.shape)
+        self.positions = self.initial
 
-        self.tween = tween.Tween(
-            tween.Low(1),
-            tween.QuadraticIn(5),
-            tween.High(5))
+        self.tweens = [
+            (partial(towards, target=self.cloud, strength=0.2), tween.Tween(
+                tween.Low(2.5),
+                tween.QuadraticIn(3),
+                tween.QuadraticOut(5),
+                tween.Low(5))),
+            #(partial(towards, target=self.original), tween.Tween(
+            #    tween.Low(7),
+            #    tween.QuadraticIn(5),
+            #    tween.High(6))),
+            (swirl, tween.Tween(
+                tween.Low(0.1),
+                tween.QuadraticIn(8),
+                tween.High(6),
+                #tween.QuadraticOut(2),
+                #tween.Low(2)
+            ))
+        ]
 
     def velocities(self, positions, t):
-        s = self.tween(t)
-        field = swirl(positions, strength=2)
-        return (1-s) * field + s * towards(positions, target=self.original)
+        return sum(tween(t) * field(positions) for field, tween in self.tweens)
+        #s = self.tween(t)
+        #field = swirl(positions, strength=2)
+        #return (1-s) * field + s * towards(positions, target=self.original)
 
     def step(self, dt):
         p = self.positions
@@ -116,11 +140,12 @@ class Storm:
         self.t += dt
 
     def camera(self) -> np.array:
-        t = 0.15 * self.t
+        t = 0 * self.t
         target = np.array([0, 0, 0])
         up = np.array([0, 0, 1])
         #r = 0.8 - 0.5 * self.tween(t)
-        r = 0.7
+        #r = 0.7
+        r = 1.1
         eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3])
         return numgl.lookat(eye, target, up)
 
@@ -157,7 +182,7 @@ class Storm:
         #    np.linspace(-s, s, n)
         #)
         #from_raw = np.vstack((xx.flat, yy.flat, zz.flat)).T
-        #to_raw = from_raw + swirl(from_raw)
+        #to_raw = from_raw + self.velocities(from_raw, self.t)
         #from_points = pygl.transform(projection, from_raw.T)
         #to_points = pygl.transform(projection, to_raw.T)
 
@@ -170,7 +195,8 @@ def main():
             sys.stdout.buffer,
             DELTA_T,
             storm.draw,
-            storm.step)
+            storm.step,
+            until=max(tween.duration() for _, tween in storm.tweens))
     except BrokenPipeError:
         pass
 
