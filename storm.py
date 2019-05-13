@@ -1,8 +1,14 @@
+"""
+Phases
+1. Particles at rest on ground (z=0)
+2. Swirl starts
+3. Formation towards random cloud
+4. Formation towards feet
+"""
 import json
 from functools import partial
 import sys
 from typing import Callable, Tuple
-from random import random
 import math
 
 import cairo
@@ -96,23 +102,24 @@ class Storm:
         self.initial = 0.1 * np.random.randn(*self.original.shape)
         self.initial[:, 2] = 0
 
-        #self.positions = 
-        self.cloud = 0.1 * np.random.randn(*self.original.shape)
+        cloud = 0.2 * np.random.randn(*self.original.shape)
+        cloud[cloud < 0] = -cloud[cloud < 0]
+    
         self.positions = self.initial
 
         self.tweens = [
-            (partial(towards, target=self.cloud, strength=0.2), tween.Tween(
+            (partial(towards, target=cloud, strength=0.2), tween.Tween(
                 tween.Low(2.5),
                 tween.QuadraticIn(3),
-                tween.QuadraticOut(5),
+                tween.QuadraticOut(4),
                 tween.Low(5))),
-            #(partial(towards, target=self.original), tween.Tween(
-            #    tween.Low(7),
-            #    tween.QuadraticIn(5),
-            #    tween.High(6))),
-            (swirl, tween.Tween(
+            (partial(towards, target=self.original, strength=0.6), tween.Tween(
+                tween.Low(10),
+                tween.QuadraticIn(5),
+                tween.High(8))),
+            (partial(swirl, strength=1.5), tween.Tween(
                 tween.Low(0.1),
-                tween.QuadraticIn(8),
+                tween.QuadraticIn(6),
                 tween.High(6),
                 #tween.QuadraticOut(2),
                 #tween.Low(2)
@@ -141,12 +148,13 @@ class Storm:
 
     def camera(self) -> np.array:
         t = 0 * self.t
-        target = np.array([0, 0, 0])
+        pan = 0.05
+        target = np.array([0, 0, pan])
         up = np.array([0, 0, 1])
         #r = 0.8 - 0.5 * self.tween(t)
-        #r = 0.7
-        r = 1.1
-        eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3])
+        r = 0.6
+        #r = 1.1
+        eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3 + pan])
         return numgl.lookat(eye, target, up)
 
     def draw(self, target: cairo.Surface, resolution: Resolution):
@@ -158,7 +166,7 @@ class Storm:
         ctx.scale(scale, scale)
 
         projection = np.dot(
-            numgl.perspective(90, 1, 0.1, 5),
+            numgl.perspective(90, h/w, 0.1, 5),
             self.camera())
         #print(projection, file=sys.stderr)
         screen = pygl.transform(projection, self.positions)
