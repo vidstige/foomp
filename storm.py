@@ -70,17 +70,15 @@ def draw_arrows(ctx: cairo.Context, from_points: np.array, to_points: np.array, 
         ctx.stroke()
     ctx.restore()
 
+
 def swirl(p: np.array, strength=1) -> np.array:
     xx, yy, zz = p.T
-    return np.vstack([
+    around = np.vstack([
         strength*yy,
         -strength * xx,
         np.zeros(zz.shape)]).T
-
-def inward(p: np.array) -> np.array:
-    #xx, yy, zz = p.T
-    #return np.vstack([-xx, -yy, np.zeros(zz.shape)]).T
-    return -p
+    lengths = np.linalg.norm(p, axis=-1)[:, None]
+    return around / (0.2 + 2*lengths)
 
 
 def towards(p: np.array, target: np.array, strength=1) -> np.array:
@@ -88,10 +86,21 @@ def towards(p: np.array, target: np.array, strength=1) -> np.array:
     return strength * (target - p)
 
 
-def normalize(x: np.array) -> np.array:
-    """Normalize row wise"""
-    return x / np.sqrt((x * x).sum(axis=1))[:, None]
+def towards_radial(p: np.array, target: np.array, strength=1) -> np.array:
+    """Returns the radial part of the vectors at p with 
+    direction field"""
+    lengths = np.linalg.norm(p, axis=-1)
+    target_lengths = np.linalg.norm(target, axis=-1)
+    diff = target_lengths - lengths
+    
+    # row wise dot product
+    #inward = -p
+    #return np.sum(field * inward, axis=1)[:, None] * field
+    pass
 
+# 1. radial component
+# 2. z-component
+# 3. "breaking/accelerate" swirl motion
 
 class Storm:
     def __init__(self):
@@ -99,11 +108,12 @@ class Storm:
         self.original = load_data('498427efb606b127a8adcc7027a84672e6b3d364a5556c8c6e94a77a2f794a34')
 
         # particles at rest on floor (z=0)
-        self.initial = 0.1 * np.random.randn(*self.original.shape)
+        self.initial = 0.2 * np.random.randn(*self.original.shape)
         self.initial[:, 2] = 0
 
         cloud = 0.2 * np.random.randn(*self.original.shape)
-        cloud[cloud < 0] = -cloud[cloud < 0]
+        #cloud[cloud < 0] = -cloud[cloud < 0]
+        cloud[cloud[:, 2] < 0, 2] = -cloud[cloud[:, 2] < 0, 2]
     
         self.positions = self.initial
 
@@ -113,16 +123,16 @@ class Storm:
                 tween.QuadraticIn(3),
                 tween.QuadraticOut(4),
                 tween.Low(5))),
-            (partial(towards, target=self.original, strength=0.6), tween.Tween(
+            (partial(towards, target=self.original, strength=1.1), tween.Tween(
                 tween.Low(10),
                 tween.QuadraticIn(5),
                 tween.High(8))),
-            (partial(swirl, strength=1.5), tween.Tween(
+            (partial(swirl, strength=0.8), tween.Tween(
                 tween.Low(0.1),
                 tween.QuadraticIn(6),
-                tween.High(6),
-                #tween.QuadraticOut(2),
-                #tween.Low(2)
+                tween.High(7),
+                tween.QuadraticOut(2),
+                tween.Low(2)
             ))
         ]
 
@@ -151,7 +161,6 @@ class Storm:
         pan = 0.05
         target = np.array([0, 0, pan])
         up = np.array([0, 0, 1])
-        #r = 0.8 - 0.5 * self.tween(t)
         r = 0.6
         #r = 1.1
         eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3 + pan])
@@ -159,14 +168,14 @@ class Storm:
 
     def draw(self, target: cairo.Surface, resolution: Resolution):
         ctx = cairo.Context(target)
-        ctx.set_source_rgba(0.92, 0.72, 1, 0.4)
+        ctx.set_source_rgba(0.92, 0.72, 1, 0.3)
         w, h = resolution
         scale = min(w, h) / 2
         ctx.translate(0.5 * w, 0.5 * h)
         ctx.scale(scale, scale)
 
         projection = np.dot(
-            numgl.perspective(90, h/w, 0.1, 5),
+            numgl.perspective(90, 1, 0.1, 5),
             self.camera())
         #print(projection, file=sys.stderr)
         screen = pygl.transform(projection, self.positions)
