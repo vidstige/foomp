@@ -134,7 +134,7 @@ class Storm:
                 tween.Low(2)
             ))
         ]
-        s = 0.05
+        s = 0.20
         self.ground = pygl.Model(
             vertices=np.array([
                 [-s, -s, 0],
@@ -185,23 +185,21 @@ class Storm:
         ctx = cairo.Context(target)
         ctx.set_source_rgba(0.92, 0.72, 1, 0.3)
         w, h = target.get_width(), target.get_height()
-        scale = min(w, h) / 2
-        ctx.translate(0.5 * w, 0.5 * h)
-        ctx.scale(scale, scale)
 
         projection = np.dot(
-            numgl.perspective(90, 1, 0.1, 5),
+            numgl.perspective(90, w/h, 0.1, 5),
             self.camera())
-        
+
         pygl.render(target, self.ground, projection)
 
         #print(projection, file=sys.stderr)
-        screen = pygl.transform(projection, self.positions)
+        clip = pygl.transform(projection, self.positions)
+        screen = pygl.get_screen(clip, (w, h))
         #normal_transform = np.linalg.inv(projection).T
 
         for x, y, z in screen:
-            ctx.move_to(x, -y)
-            ctx.arc(x, -y, 0.01, 0, TAU)
+            ctx.move_to(x, y)
+            ctx.arc(x, y, 1, 0, TAU)
             ctx.fill()
 
         #print(min(z for _, _, z in screen), file=sys.stderr)
