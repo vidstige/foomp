@@ -166,10 +166,10 @@ class Storm:
         eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3 + pan])
         return numgl.lookat(eye, target, up)
 
-    def draw(self, target: cairo.Surface, resolution: Resolution):
+    def draw(self, target: cairo.ImageSurface):
         ctx = cairo.Context(target)
         ctx.set_source_rgba(0.92, 0.72, 1, 0.3)
-        w, h = resolution
+        w, h = target.get_width(), target.get_height()
         scale = min(w, h) / 2
         ctx.translate(0.5 * w, 0.5 * h)
         ctx.scale(scale, scale)

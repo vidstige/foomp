@@ -24,5 +24,5 @@ def animate(f, dt, draw, step=None, resolution=TWITTER, until=None):
         clear(surface, color=(0, 0, 0))
         if step:
             step(dt)
-        draw(surface, resolution)
+        draw(surface)
         f.write(surface.get_data())
