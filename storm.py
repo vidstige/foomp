@@ -20,7 +20,6 @@ import tween
 
 DELTA_T = 0.1
 
-Resolution = Tuple[int, int]
 Field = Callable[[np.array, np.array, np.array], np.array]
 
 
@@ -42,7 +41,7 @@ def load_data(reconstruction_urnhash: str) -> np.array:
     ])
 
 
-def draw_field_2d(ctx: cairo.Context, resolution: Resolution, field: Field):
+def draw_field_2d(ctx: cairo.Context, resolution: pygl.Resolution, field: Field):
     ctx.save()
     ctx.set_line_width(0.01)
     n = 10
@@ -135,6 +134,22 @@ class Storm:
                 tween.Low(2)
             ))
         ]
+        s = 0.05
+        self.ground = pygl.Model(
+            vertices=np.array([
+                [-s, -s, 0],
+                [ s, -s, 0],
+                [ s,  s, 0],
+                [-s,  s, 0],
+                ]),
+            faces=[[0, 1, 2], [2, 3, 0]],
+            attributes=np.array([
+                [0, 0],
+                [1, 0],
+                [1, 1],
+                [0, 1],
+            ])
+        )
 
     def velocities(self, positions, t):
         return sum(tween(t) * field(positions) for field, tween in self.tweens)
@@ -157,7 +172,7 @@ class Storm:
         self.t += dt
 
     def camera(self) -> np.array:
-        t = 0 * self.t
+        t = 0.05 * self.t
         pan = 0.05
         target = np.array([0, 0, pan])
         up = np.array([0, 0, 1])
@@ -177,6 +192,9 @@ class Storm:
         projection = np.dot(
             numgl.perspective(90, 1, 0.1, 5),
             self.camera())
+        
+        pygl.render(target, self.ground, projection)
+
         #print(projection, file=sys.stderr)
         screen = pygl.transform(projection, self.positions)
         #normal_transform = np.linalg.inv(projection).T

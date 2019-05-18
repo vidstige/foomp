@@ -1,5 +1,9 @@
 import numpy as np
+import cairo
 from typing import Tuple
+
+
+Resolution = Tuple[int, int]
 
 
 def normalized(a, axis=-1, order=2):
@@ -12,9 +16,11 @@ def is_comment(line: str) -> bool:
 
 
 class Model(object):
-    def __init__(self, vertices, faces):
+    def __init__(self, vertices, faces, attributes=None):
         self.vertices = vertices
         self.faces = faces
+        self.face_normals = None
+        self.attributes = attributes
 
     def _face_normal(self, face) -> np.array:
         p0, p1, p2 = [self.vertices[i] for i in face]
@@ -22,7 +28,7 @@ class Model(object):
 
     def compute_face_normals(self):
         self.face_normals = [self._face_normal(f) for f in self.faces]
-        
+
     @staticmethod
     def load_obj(path: str) -> 'Model':
         vertices = []
@@ -49,6 +55,10 @@ def edge_function(p0, p1, p2):
     '''
     #return (p2.x - p0.x) * (p1.y - p0.y) - (p2.y - p0.y) * (p1.x - p0.x)
     return (p2[0] - p0[0]) * (p1[1] - p0[1]) - (p2[1] - p0[1]) * (p1[0] - p0[0])
+
+
+def edge(p0, p1, p2):
+    return np.cross(p2 - p0, p1 - p0)
 
 
 def contains_point(p0, p1, p2, p):
@@ -113,11 +123,11 @@ class RenderTarget(object):
                     self.img[y, x] = color
 
 
-def get_screen(ndc: np.array, shape: Tuple) -> np.array:
-    width, height = shape[1], shape[0]
-    center = np.array([width/2, height/2, 0, 0])
-    scale = np.array([width/2, height/2, 1, 1])
-    return center + np.multiply(ndc, scale)
+def get_screen(clip: np.array, r: Resolution) -> np.array:
+    width, height = r
+    center = np.array([width / 2, height / 2, 0])
+    scale = np.array([width / 2, -height / 2, 1])
+    return center + clip * scale
 
 
 def extend(vertices: np.array) -> np.array:
@@ -134,27 +144,55 @@ def transform(matrix: np.array, vertices: np.array) -> np.array:
     return to_clip(np.dot(matrix, extend(vertices).T).T)
 
 
-def render(img: np.array, model: Model, projection: np.array):
-    # transform points to camera space
-    camera_vertices = (projection * extend(model.vertices).T).T
-    normal_transform = np.linalg.inv(projection).T
+def resolution(surface: cairo.ImageSurface) -> Resolution:
+    return surface.get_width(), surface.get_height()
 
-    # divide and scale into screen space
-    screen = get_screen(camera_vertices, img.shape)
 
-    ambient = np.array([0, 0, 0, 1])
-    directional = np.array([1, 1, 1, 1]), np.array([0, 0, -1])
+def draw_triangle(target: cairo.ImageSurface, triangle, attributes):
+    # drop z coordinate
+    p0, p1, p2 = [p[:2] for p in triangle]
 
-    target = RenderTarget(img)
-    forward = np.array([0, 0, -1])
-    for face, raw_normal in zip(model.faces, model.face_normals):
-        normal = np.dot(normal_transform, np.append(raw_normal, 1))
-        normal = np.array(normal).flatten()[:-1]
-        # cull faces
-        if np.dot(normal, forward) > 0:
-            directional_color, direction = directional
-            color = np.clip(ambient + max(np.dot(normal, direction), 0) * directional_color, 0, 1)
-            target.triangle(screen[face], color)
+    # compute area 
+    area = edge(p0, p1, p2)
+
+    if area == 0:
+        return
+
+    width, height = resolution(target)
+    xmin = int(max(min(p0[0], p1[0], p2[0]), 0))
+    xmax = int(min(max(p0[0], p1[0], p2[0]), width))
+    ymin = int(max(min(p0[1], p1[1], p2[1]), 0))
+    ymax = int(min(max(p0[1], p1[1], p2[1]), height))
+
+    x, y = np.meshgrid(range(xmin, xmax), range(ymin, ymax), indexing='xy')
+    p = np.vstack([x.ravel(), y.ravel()]).T
+    # Barycentric coordinates are calculated as the areas of the three sub-triangles divided
+    # by the area of the whole triangle.
+    barycentric = np.vstack([
+        edge(p1, p2, p),
+        edge(p2, p0, p),
+        edge(p0, p1, p)
+    ]).T / area
+
+    # Find all indices of rows where all columns are positive
+    inside = np.where(np.all(barycentric >= 0, axis=-1))
+
+    # Compute indices of all points inside triangle
+    stride = np.array([4, target.get_stride()])
+    indices = np.dot(p[inside], stride)
+    data = target.get_data()
+    for index in indices:
+        data[index] = 255
+
+
+def render(target: cairo.ImageSurface, model: Model, projection: np.array):
+    # transform points to camera space and divide into clip space
+    clip_vertices = transform(projection, model.vertices)
+    # scale and transform into screen space
+    screen = get_screen(clip_vertices, resolution(target))
+
+    for face in model.faces:
+        draw_triangle(target, screen[face], model.attributes[face])
 
     #for s in screen:
     #    x, y, z, w = s[0,0], s[0,1], s[0,2], s[0,3]
