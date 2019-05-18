@@ -124,13 +124,14 @@ def extend(vertices: np.array) -> np.array:
     return np.hstack([vertices, np.ones((len(vertices), 1))])
 
 
-def to_screen(points: np.array) -> np.array:
+def to_clip(points: np.array) -> np.array:
+    """Transforms vertices to clip space"""
     W = points[:, 3]
     return np.divide(points[:, :3], W[:, None])
 
 
 def transform(matrix: np.array, vertices: np.array) -> np.array:
-    return to_screen(np.dot(matrix, extend(vertices).T).T)
+    return to_clip(np.dot(matrix, extend(vertices).T).T)
 
 
 def render(img: np.array, model: Model, projection: np.array):
