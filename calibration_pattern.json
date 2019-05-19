@@ -1,0 +1,14 @@
+{
+    "image_filename" : "calibration_pattern.png",
+    "image_width" : 1400,
+    "image_height" : 1400,
+    "rectangle_center_x_image" : 700.0,
+    "rectangle_center_y_image" : 700.0,
+    "rectangle_width_image" : 1226.0,
+    "rectangle_height_image" : 1122.0,
+    "rectangle_width_world" : 0.36,
+    "rectangle_height_world" : 0.33,
+    "inner_rectangle_width_world" : 0.26,
+    "inner_rectangle_height_world" : 0.26,
+    "small_dot_offset_world" : 0.029
+}

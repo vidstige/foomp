@@ -23,6 +23,23 @@ DELTA_T = 0.1
 Field = Callable[[np.array, np.array, np.array], np.array]
 
 
+class ImageTexture(pygl.Texture):
+    def __init__(self, width: int, height: int, filename: str):
+        self.width = width
+        self.height = height
+        with open(filename, 'rb') as f:
+            self.data = f.read()
+        assert len(self.data) == width*height*3
+
+    def __call__(self, u: float, v: float) -> Tuple[int, int, int]:
+        if u < 0 or u >= 1 or v < 0 or v >= 1:
+            return 0, 0, 0
+        x = int(u * self.width)
+        y = int(v * self.height)
+        index = int(x * 3 + y*self.width * 3)
+        return self.data[index+0], self.data[index+1], self.data[index+2]
+
+
 def load_data(reconstruction_urnhash: str) -> np.array:
     with open('data/{}/scene.json'.format(reconstruction_urnhash)) as f:
         scene = json.load(f)
@@ -134,7 +151,7 @@ class Storm:
                 tween.Low(2)
             ))
         ]
-        s = 0.10
+        s = 0.33
         self.ground = pygl.Model(
             vertices=np.array([
                 [-s, -s, 0],
@@ -148,7 +165,8 @@ class Storm:
                 [1, 0],
                 [1, 1],
                 [0, 1],
-            ])
+            ]),
+            texture=ImageTexture(512, 512, 'calibration_pattern.rgb')
         )
 
     def velocities(self, positions, t):

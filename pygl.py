@@ -15,13 +15,22 @@ def is_comment(line: str) -> bool:
     return line.startswith('#')
 
 
+class Texture:
+    def __call__(self, u, v) -> Tuple[int, int, int]:
+        return (int(u*255), int(v*255), 0)
+
+
 class Model(object):
-    def __init__(self, vertices, faces, attributes=None):
+    def __init__(self,
+            vertices, faces,
+            attributes=None,
+            texture: Texture = None):
         assert attributes is None or len(vertices) == len(attributes)
         self.vertices = vertices
         self.faces = faces
         self.face_normals = None
         self.attributes = attributes
+        self.texture = texture
 
     def _face_normal(self, face) -> np.array:
         p0, p1, p2 = [self.vertices[i] for i in face]
@@ -149,11 +158,7 @@ def resolution(surface: cairo.ImageSurface) -> Resolution:
     return surface.get_width(), surface.get_height()
 
 
-class Texture:
-    def __call__(self, u, v) -> Tuple[int, int, int]:
-        return (int(u*255), int(v*255), 0)
-
-def draw_triangle(target: cairo.ImageSurface, triangle, attributes):
+def draw_triangle(target: cairo.ImageSurface, triangle, attributes, texture: Texture):
     # drop z coordinate
     p0, p1, p2 = [p[:2] for p in triangle]
 
@@ -187,10 +192,9 @@ def draw_triangle(target: cairo.ImageSurface, triangle, attributes):
 
     # Interpolate vertex attributes
     attrs = np.dot(barycentric[np.where(is_inside)], attributes)
-    
+
     # Fill pixels
     data = target.get_data()
-    texture = Texture()
     for index, (u, v) in zip(indices, attrs):
         r, g, b = texture(u, v)
         data[index + 0] = r
@@ -204,7 +208,11 @@ def render(target: cairo.ImageSurface, model: Model, projection: np.array):
     screen = get_screen(clip_vertices, resolution(target))
 
     for face in model.faces:
-        draw_triangle(target, screen[face], model.attributes[face])
+        draw_triangle(
+            target,
+            screen[face],
+            model.attributes[face],
+            model.texture)
 
     #for s in screen:
     #    x, y, z, w = s[0,0], s[0,1], s[0,2], s[0,3]
