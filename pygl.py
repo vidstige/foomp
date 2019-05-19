@@ -17,6 +17,7 @@ def is_comment(line: str) -> bool:
 
 class Model(object):
     def __init__(self, vertices, faces, attributes=None):
+        assert attributes is None or len(vertices) == len(attributes)
         self.vertices = vertices
         self.faces = faces
         self.face_normals = None
@@ -148,6 +149,10 @@ def resolution(surface: cairo.ImageSurface) -> Resolution:
     return surface.get_width(), surface.get_height()
 
 
+class Texture:
+    def __call__(self, u, v) -> Tuple[int, int, int]:
+        return (int(u*255), int(v*255), 0)
+
 def draw_triangle(target: cairo.ImageSurface, triangle, attributes):
     # drop z coordinate
     p0, p1, p2 = [p[:2] for p in triangle]
@@ -174,17 +179,23 @@ def draw_triangle(target: cairo.ImageSurface, triangle, attributes):
     ]).T / area
 
     # Find all indices of rows where all columns are positive
-    inside = np.where(np.all(barycentric >= 0, axis=-1))
+    is_inside = np.all(barycentric >= 0, axis=-1)
 
     # Compute indices of all points inside triangle
     stride = np.array([4, target.get_stride()])
-    indices = np.dot(p[inside], stride)
+    indices = np.dot(p[np.where(is_inside)], stride)
+
+    # Interpolate vertex attributes
+    attrs = np.dot(barycentric[np.where(is_inside)], attributes)
     
     # Fill pixels
     data = target.get_data()
-    for index in indices:
-            data[index] = 255
-
+    texture = Texture()
+    for index, (u, v) in zip(indices, attrs):
+        r, g, b = texture(u, v)
+        data[index + 0] = r
+        data[index + 1] = g
+        data[index + 2] = b
 
 def render(target: cairo.ImageSurface, model: Model, projection: np.array):
     # transform points to camera space and divide into clip space
