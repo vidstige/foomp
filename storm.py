@@ -134,7 +134,7 @@ class Storm:
                 tween.Low(2)
             ))
         ]
-        s = 0.20
+        s = 0.10
         self.ground = pygl.Model(
             vertices=np.array([
                 [-s, -s, 0],
