@@ -37,7 +37,7 @@ class ImageTexture(pygl.Texture):
         x = int(u * self.width)
         y = int(v * self.height)
         index = int(x * 3 + y*self.width * 3)
-        return self.data[index+0], self.data[index+1], self.data[index+2]
+        return 255-self.data[index+0], 255-self.data[index+1], 255-self.data[index+2]
 
 
 def load_data(reconstruction_urnhash: str) -> np.array:

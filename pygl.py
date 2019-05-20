@@ -168,10 +168,11 @@ def draw_triangle(target: cairo.ImageSurface, triangle, attributes, texture: Tex
     if area == 0:
         return
 
-    xmin = int(min(p0[0], p1[0], p2[0]))
-    xmax = int(max(p0[0], p1[0], p2[0]))
-    ymin = int(min(p0[1], p1[1], p2[1]))
-    ymax = int(max(p0[1], p1[1], p2[1]))
+    width, height = resolution(target)
+    xmin = int(max(min(p0[0], p1[0], p2[0]), 0))
+    xmax = int(min(max(p0[0], p1[0], p2[0]), width))
+    ymin = int(max(min(p0[1], p1[1], p2[1]), 0))
+    ymax = int(min(max(p0[1], p1[1], p2[1]), height))
 
     x, y = np.meshgrid(range(xmin, xmax), range(ymin, ymax), indexing='xy')
     p = np.vstack([x.ravel(), y.ravel()]).T
