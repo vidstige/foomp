@@ -189,10 +189,10 @@ def draw_triangle(target: cairo.ImageSurface, triangle, attributes, texture: Tex
 
     # Compute indices of all points inside triangle
     stride = np.array([4, target.get_stride()])
-    indices = np.dot(p[np.where(is_inside)], stride)
+    indices = np.dot(p[is_inside], stride)
 
     # Interpolate vertex attributes
-    attrs = np.dot(barycentric[np.where(is_inside)], attributes)
+    attrs = np.dot(barycentric[is_inside], attributes)
 
     # Fill pixels
     data = target.get_data()
