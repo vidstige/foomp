@@ -148,7 +148,7 @@ class Storm:
         eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3 + pan])
         return numgl.lookat(eye, target, up)
 
-    def draw(self, target: cairo.ImageSurface):
+    def draw_frame(self, target: cairo.ImageSurface):
         ctx = cairo.Context(target)
         ctx.set_source_rgba(0.92, 0.72, 1, 0.3)
         w, h = target.get_width(), target.get_height()
@@ -166,6 +166,27 @@ class Storm:
             ctx.move_to(x, y)
             ctx.arc(x, y, 1, 0, TAU)
             ctx.fill()
+
+    def draw(self, target: cairo.ImageSurface):
+        saved = self.positions, self.t
+
+        n = 4
+        lookahead = 0.2
+        dt = lookahead / n
+
+        targets = []
+        for _ in range(n):
+            image = cairo.ImageSurface(cairo.Format.RGB24, target.get_width(), target.get_height())
+            self.draw_frame(image)
+            targets.append(image)
+            self.step(dt)
+
+        data = target.get_data()
+        for i in range(len(data)):
+            data[i] = int(sum(img.get_data()[i] for img in targets) / n)
+
+        self.positions, self.t = saved
+ 
 
 def main():
     try:
