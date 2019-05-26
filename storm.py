@@ -58,35 +58,6 @@ def load_data(reconstruction_urnhash: str) -> np.array:
     ])
 
 
-def draw_field_2d(ctx: cairo.Context, resolution: pygl.Resolution, field: Field):
-    ctx.save()
-    ctx.set_line_width(0.01)
-    n = 10
-    w, h = resolution
-    xx, yy = np.meshgrid(np.linspace(-w, w, n), np.linspace(-h, h, n))
-    zz = np.zeros(xx.shape)
-    vvx, vvy, _ = field(xx, yy, zz)
-    scale = 0.05
-    for x, y, vx, vy in zip(xx.flat, yy.flat, vvx.flat, vvy.flat):
-        ctx.move_to(x, y)
-        ctx.line_to(x + scale * vx, y + scale * vy)
-        ctx.stroke()
-
-    ctx.restore()
-
-
-def draw_arrows(ctx: cairo.Context, from_points: np.array, to_points: np.array, scale: float):
-    ctx.save()
-    ctx.set_line_width(0.1)
-    for point, arrow in zip(from_points, to_points):
-        x, y, _ = point
-        dx, dy, _ = arrow
-        ctx.move_to(x, y)
-        ctx.line_to(x + scale * dx, y + scale * dy)
-        ctx.stroke()
-    ctx.restore()
-
-
 def swirl(p: np.array, strength=1) -> np.array:
     xx, yy, zz = p.T
     around = np.vstack([
@@ -101,22 +72,6 @@ def towards(p: np.array, target: np.array, strength=1) -> np.array:
     """Vector field that sends particles towards target"""
     return strength * (target - p)
 
-
-def towards_radial(p: np.array, target: np.array, strength=1) -> np.array:
-    """Returns the radial part of the vectors at p with 
-    direction field"""
-    lengths = np.linalg.norm(p, axis=-1)
-    target_lengths = np.linalg.norm(target, axis=-1)
-    diff = target_lengths - lengths
-    
-    # row wise dot product
-    #inward = -p
-    #return np.sum(field * inward, axis=1)[:, None] * field
-    pass
-
-# 1. radial component
-# 2. z-component
-# 3. "breaking/accelerate" swirl motion
 
 class Storm:
     def __init__(self):
@@ -171,9 +126,6 @@ class Storm:
 
     def velocities(self, positions, t):
         return sum(tween(t) * field(positions) for field, tween in self.tweens)
-        #s = self.tween(t)
-        #field = swirl(positions, strength=2)
-        #return (1-s) * field + s * towards(positions, target=self.original)
 
     def step(self, dt):
         p = self.positions
@@ -185,8 +137,6 @@ class Storm:
         k3 = dt * v(p + 0.5 * k2, t + 0.5*dt)
         k4 = dt * v(p + k3, t + dt)
         self.positions = p + (k1 + 2*k2 + 2*k3 + k4) / 6
-        #v = self.velocities(self.positions, self.t)
-        #self.positions += dt * v
         self.t += dt
 
     def camera(self) -> np.array:
@@ -195,7 +145,6 @@ class Storm:
         target = np.array([0, 0, pan])
         up = np.array([0, 0, 1])
         r = 0.6
-        #r = 1.1
         eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3 + pan])
         return numgl.lookat(eye, target, up)
 
@@ -210,34 +159,13 @@ class Storm:
 
         pygl.render(target, self.ground, projection)
 
-        #print(projection, file=sys.stderr)
         clip = pygl.transform(projection, self.positions)
         screen = pygl.get_screen(clip, (w, h))
-        #normal_transform = np.linalg.inv(projection).T
 
         for x, y, z in screen:
             ctx.move_to(x, y)
             ctx.arc(x, y, 1, 0, TAU)
             ctx.fill()
-
-        #print(min(z for _, _, z in screen), file=sys.stderr)
-        #print(max(z for _, _, z in screen), file=sys.stderr)
-
-        # draw field
-        # 1. evaluate field at grid extending -s,s in all direction at n points
-        #s = 0.7
-        #n = 8
-        #xx, yy, zz = np.meshgrid(
-        #    np.linspace(-s, s, n),
-        #    np.linspace(-s, s, n),
-        #    np.linspace(-s, s, n)
-        #)
-        #from_raw = np.vstack((xx.flat, yy.flat, zz.flat)).T
-        #to_raw = from_raw + self.velocities(from_raw, self.t)
-        #from_points = pygl.transform(projection, from_raw.T)
-        #to_points = pygl.transform(projection, to_raw.T)
-
-        #draw_arrows(ctx, from_points, to_points, scale=0.002)
 
 def main():
     try:
