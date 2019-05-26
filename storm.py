@@ -106,23 +106,23 @@ class Storm:
                 tween.Low(2)
             ))
         ]
-        s = 0.33
-        self.ground = pygl.Model(
-            vertices=np.array([
-                [-s, -s, 0],
-                [ s, -s, 0],
-                [ s,  s, 0],
-                [-s,  s, 0],
-                ]),
-            faces=[[0, 1, 2], [2, 3, 0]],
-            attributes=np.array([
-                [0, 0],
-                [1, 0],
-                [1, 1],
-                [0, 1],
-            ]),
-            texture=ImageTexture(512, 512, 'calibration_pattern.rgb')
-        )
+        #s = 0.33
+        #self.ground = pygl.Model(
+        #    vertices=np.array([
+        #        [-s, -s, 0],
+        #        [ s, -s, 0],
+        #        [ s,  s, 0],
+        #        [-s,  s, 0],
+        #        ]),
+        #    faces=[[0, 1, 2], [2, 3, 0]],
+        #    attributes=np.array([
+        #        [0, 0],
+        #        [1, 0],
+        #        [1, 1],
+        #        [0, 1],
+        #    ]),
+        #    texture=ImageTexture(512, 512, 'calibration_pattern.rgb')
+        #)
 
     def velocities(self, positions, t):
         return sum(tween(t) * field(positions) for field, tween in self.tweens)
@@ -157,7 +157,7 @@ class Storm:
             numgl.perspective(90, w/h, 0.1, 5),
             self.camera())
 
-        pygl.render(target, self.ground, projection)
+        #pygl.render(target, self.ground, projection)
 
         clip = pygl.transform(projection, self.positions)
         screen = pygl.get_screen(clip, (w, h))
