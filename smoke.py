@@ -53,14 +53,15 @@ def draw(target: cairo.ImageSurface, t: float):
     ws = np.linspace(0, 1, n)
     ops = [path.point(w) for w in ws]
     pr = 1
-    px = np.array([as_tuple(cmath.rect(pr, w*w*TAU-0.5*t) + pr*(1 + 1j)) for w in ws])
-    py = np.array([as_tuple(cmath.rect(pr, w*w*TAU-0.5*t) + pr*(2 + 2j)) for w in ws])
+    px = np.array([as_tuple(cmath.rect(pr, w*w*TAU-2*t) + pr*(1 + 1j)) for w in ws])
+    py = np.array([as_tuple(cmath.rect(pr, w*w*TAU-2*t) + pr*(2 + 2j)) for w in ws])
     dpxs = perlin.noise(px[:, 0][:, None], px[:, 1][:, None], size=64, seed=6) - 0.5
     dpys = perlin.noise(py[:, 0][:, None], py[:, 1][:, None], size=64, seed=6) - 0.5
 
     moved = False
     for w, p, dpx, dpy in zip(ws, ops, dpxs, dpys):
-        dp = complex(dpx, dpy) * 100*w
+        intensity = 100 * w * w
+        dp = complex(dpx, dpy) * intensity
         if not moved:
             ctx.move_to(*as_tuple(p + dp))
             moved = True
@@ -78,11 +79,11 @@ class Smoke:
         self.t += dt
 
     def draw(self, target: cairo.ImageSurface):
-        motionblur(target, self.t, draw, 0.1, 3)
-        #draw(target, self.t)
+        #motionblur(target, self.t, draw, 0.1, 3)
+        draw(target, self.t)
 
     def duration(self):
-        return 5
+        return 20
 
 def main():
     try:
