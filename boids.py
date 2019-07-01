@@ -18,23 +18,32 @@ DELTA_T = 0.1
 class Boids:
     def __init__(self):
         self.t = 0
-        self.positions = np.random.randn(100, 3) * 0.015
+        x = np.random.randn(100, 3) * 0.015
+        v = np.random.randn(100, 3) * 0.001
+        self.y = np.hstack([x, v])
 
-    def velocities(self, positions, t):
-        del t
-        return np.zeros(positions.shape)
+    def f(self, y, t):
+        """Returns state vector used by integrator"""
+        x, v = np.hsplit(y, 2)
+        a = np.zeros(x.shape)
+        return np.hstack([v, a])
 
     def step(self, dt):
-        p = self.positions
-        v = self.velocities
+        f = self.f
         t = self.t
 
-        k1 = dt * v(p, t)
-        k2 = dt * v(p + 0.5 * k1, t + 0.5*dt)
-        k3 = dt * v(p + 0.5 * k2, t + 0.5*dt)
-        k4 = dt * v(p + k3, t + dt)
-        self.positions = p + (k1 + 2*k2 + 2*k3 + k4) / 6
+        y = self.y
+
+        k1 = dt * f(y, t)
+        k2 = dt * f(y + 0.5 * k1, t + 0.5*dt)
+        k3 = dt * f(y + 0.5 * k2, t + 0.5*dt)
+        k4 = dt * f(y + k3, t + dt)
+        self.y += (k1 + 2 * k2 + 2 * k3 + k4) / 6
         self.t += dt
+    
+    def positions(self):
+        x, v = np.hsplit(self.y, 2)
+        return x
 
     def camera(self) -> np.array:
         #t = 0.05 * self.t
@@ -55,12 +64,12 @@ class Boids:
             numgl.perspective(90, w/h, 0.1, 5),
             self.camera())
 
-        clip = pygl.transform(projection, self.positions)
+        clip = pygl.transform(projection, self.positions())
         screen = pygl.get_screen(clip, (w, h))
 
         for x, y, _ in screen:
             ctx.move_to(x, y)
-            ctx.arc(x, y, 1, 0, TAU)
+            ctx.arc(x, y, 2, 0, TAU)
             ctx.fill()
 
     def draw(self, target: cairo.ImageSurface):
@@ -75,6 +84,7 @@ def main():
             DELTA_T,
             boids.draw,
             boids.step,
+            resolution=(1024, 640),
             until=None)
     except BrokenPipeError:
         pass
