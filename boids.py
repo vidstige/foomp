@@ -30,20 +30,25 @@ class Boids:
         a = np.zeros(x.shape)
 
         desired = 0.01  # spring length
-
+        nest = np.zeros(3)
         kdtree = KDTree(x)
 
         for i, bx in enumerate(x):
             # Find seven closest neighbors within a circle
-            distances, j = kdtree.query(bx, k=7+1, distance_upper_bound=desired*2)
+            distances, j = kdtree.query(bx, k=7+1, distance_upper_bound=desired*3)
 
-            #print(i, j, file=sys.stderr)
             # Filter out "self" and len(x) as returned by query
             ok = np.logical_and(distances > 0, distances < len(x))
             distances, j = distances[ok], j[ok]
 
+            # add spring force
             delta = x[j] - bx
-            a[i] = np.sum(0.1*(distances[:, None] - desired) * delta / distances[:, None], axis=0)
+            a[i] += np.sum(0.2*(distances[:, None] - desired) * delta / distances[:, None], axis=0)
+    
+            # stay close to nest
+            nest_distance = np.linalg.norm(nest - x[i])
+            if nest_distance > 0.15:
+                a[i] += 0.001 * (nest - x[i]) / nest_distance
 
         # Align the birds speed
 
