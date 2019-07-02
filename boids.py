@@ -7,6 +7,8 @@ import math
 
 import cairo
 import numpy as np
+from scipy.spatial import KDTree
+
 from foomp import animate, TAU
 import numgl
 import pygl
@@ -18,14 +20,33 @@ DELTA_T = 0.1
 class Boids:
     def __init__(self):
         self.t = 0
-        x = np.random.randn(100, 3) * 0.015
-        v = np.random.randn(100, 3) * 0.001
+        x = np.random.randn(50, 3) * 0.030
+        v = np.random.randn(50, 3) * 0.001
         self.y = np.hstack([x, v])
 
     def f(self, y, t):
         """Returns state vector used by integrator"""
         x, v = np.hsplit(y, 2)
         a = np.zeros(x.shape)
+
+        desired = 0.01  # spring length
+
+        kdtree = KDTree(x)
+
+        for i, bx in enumerate(x):
+            # Find seven closest neighbors within a circle
+            distances, j = kdtree.query(bx, k=7+1, distance_upper_bound=desired*2)
+
+            #print(i, j, file=sys.stderr)
+            # Filter out "self" and len(x) as returned by query
+            ok = np.logical_and(distances > 0, distances < len(x))
+            distances, j = distances[ok], j[ok]
+
+            delta = x[j] - bx
+            a[i] = np.sum(0.1*(distances[:, None] - desired) * delta / distances[:, None], axis=0)
+
+        # Align the birds speed
+
         return np.hstack([v, a])
 
     def step(self, dt):
