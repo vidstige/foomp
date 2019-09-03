@@ -19,10 +19,15 @@ DELTA_T = 0.1
 
 class Boids:
     def __init__(self):
+        n = 5000
         self.t = 0
-        x = np.random.randn(50, 3) * 0.030
-        v = np.random.randn(50, 3) * 0.001
-        self.y = np.hstack([x, v])
+        p = np.random.randn(n, 3) * 0.030
+        # flip z-coordinate of negative z values
+        p[p[:, 2] < 0, 2] = -p[p[:, 2] < 0, 2]
+
+        x, y, z = np.hsplit(p, 3)
+        v = 0.5*np.hstack([y, -x, z])
+        self.y = np.hstack([p, v])
 
     def f(self, y, t):
         """Returns state vector used by integrator"""
@@ -30,12 +35,11 @@ class Boids:
         a = np.zeros(x.shape)
 
         desired = 0.01  # spring length
-        nest = np.zeros(3)
         kdtree = KDTree(x)
 
         for i, bx in enumerate(x):
             # Find seven closest neighbors within a circle
-            distances, j = kdtree.query(bx, k=7+1, distance_upper_bound=desired*3)
+            distances, j = kdtree.query(bx, k=7+1, distance_upper_bound=desired*10)
 
             # Filter out "self" and len(x) as returned by query
             ok = np.logical_and(distances > 0, distances < len(x))
@@ -43,14 +47,22 @@ class Boids:
 
             # add spring force
             delta = x[j] - bx
-            a[i] += np.sum(0.2*(distances[:, None] - desired) * delta / distances[:, None], axis=0)
+            a[i] += np.sum(0.5*(distances[:, None] - desired) * delta / distances[:, None], axis=0)
     
             # stay close to nest
+            nest = np.zeros(3)
             nest_distance = np.linalg.norm(nest - x[i])
-            if nest_distance > 0.15:
-                a[i] += 0.001 * (nest - x[i]) / nest_distance
+            #if nest_distance > 0.05:
+            a[i] += 0.001 * (nest - x[i]) / nest_distance
+            
+            # align speeds (if any neighbors)
+            if len(j):
+                a[i] += 0.2 * (np.mean(v[j], axis=0) - v[i])
 
-        # Align the birds speed
+            # try to maintain a specific speed
+            vn = np.linalg.norm(v[i])
+            target_speed = 2
+            a[i] += 0.01 * (vn - target_speed) * v[i]
 
         return np.hstack([v, a])
 
@@ -72,14 +84,54 @@ class Boids:
         return x
 
     def camera(self) -> np.array:
-        #t = 0.05 * self.t
-        t = 0
+        t = 0.05 * self.t
+        #t = 0
         pan = 0.05
         target = np.array([0, 0, pan])
         up = np.array([0, 0, 1])
-        r = 0.6
+        r = 1.2
         eye = np.array([r * math.cos(t), r * math.sin(t), r * 0.3 + pan])
         return numgl.lookat(eye, target, up)
+    
+    def draw_grid(self, projection, ctx, w, h):
+        """Draws a line grid"""
+        ctx.save()
+        ctx.set_line_width(1)
+    
+        n = 20
+        vertical_a = np.vstack([
+            np.linspace(-1, 1, n),
+            -1 * np.ones(n),
+            np.zeros(n)]).T
+        vertical_b = np.vstack([
+            np.linspace(-1, 1, n),
+            np.ones(n),
+            np.zeros(n)]).T
+
+        screen_vertical_a = pygl.get_screen(pygl.transform(projection, vertical_a), (w, h))
+        screen_vertical_b = pygl.get_screen(pygl.transform(projection, vertical_b), (w, h))
+        for (ax, ay, _), (bx, by, _) in zip(screen_vertical_a, screen_vertical_b):
+            ctx.move_to(ax, ay)
+            ctx.line_to(bx, by)
+            ctx.stroke()
+        
+        hoizontal_a = np.vstack([
+            -1 * np.ones(n),
+            np.linspace(-1, 1, n),
+            np.zeros(n)]).T
+        hoizontal_b = np.vstack([
+            np.ones(n),
+            np.linspace(-1, 1, n),
+            np.zeros(n)]).T
+
+        screen_horizontal_a = pygl.get_screen(pygl.transform(projection, hoizontal_a), (w, h))
+        screen_horizontal_b = pygl.get_screen(pygl.transform(projection, hoizontal_b), (w, h))
+        for (ax, ay, _), (bx, by, _) in zip(screen_horizontal_a, screen_horizontal_b):
+            ctx.move_to(ax, ay)
+            ctx.line_to(bx, by)
+            ctx.stroke()
+        
+        ctx.restore()
 
     def draw_frame(self, target: cairo.ImageSurface):
         ctx = cairo.Context(target)
@@ -89,6 +141,8 @@ class Boids:
         projection = np.dot(
             numgl.perspective(90, w/h, 0.1, 5),
             self.camera())
+
+        self.draw_grid(projection, ctx, w, h)
 
         clip = pygl.transform(projection, self.positions())
         screen = pygl.get_screen(clip, (w, h))
@@ -111,7 +165,7 @@ def main():
             boids.draw,
             boids.step,
             resolution=(1024, 640),
-            until=None)
+            until=16)
     except BrokenPipeError:
         pass
 
