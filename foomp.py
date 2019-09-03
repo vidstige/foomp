@@ -21,7 +21,7 @@ def animate(f, dt, draw, step=None, resolution=TWITTER, until=None):
     t = 0
     while not until or t < until:
         t += dt
-        clear(surface, color=(0, 0, 0))
+        clear(surface, color=(1, 1, 1))
         if step:
             step(dt)
         draw(surface)
