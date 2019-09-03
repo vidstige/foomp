@@ -26,10 +26,11 @@ def perspective(fovy, aspect, n, f):
     sx, sy = s / aspect, s
     zz = (f + n) / (n - f)
     zw = 2 * f * n / (n - f)
-    return np.array([[sx,  0,  0,  0],
-                      [ 0, sy,  0,  0],
-                      [ 0,  0, zz, zw],
-                      [ 0,  0, -1,  0]]).T
+    return np.array([
+        [sx,  0,  0,  0],     # pylint: disable=bad-whitespace
+        [ 0, sy,  0,  0],     # pylint: disable=bad-whitespace
+        [ 0,  0, zz, zw],     # pylint: disable=bad-whitespace
+        [ 0,  0, -1,  0]]).T  # pylint: disable=bad-whitespace
 
 
 def frustum(x0, x1, y0, y1, z0, z1):
@@ -39,26 +40,29 @@ def frustum(x0, x1, y0, y1, z0, z1):
     d = -2*z1*z0/(z1-z0)
     sx = 2*z0/(x1-x0)
     sy = 2*z0/(y1-y0)
-    return np.matrix([[sx, 0, a, 0],
-                      [ 0,sy, b, 0],
-                      [ 0, 0, c, d],
-                      [ 0, 0,-1, 0]])
+    return np.matrix([
+        [sx,  0,  a, 0],
+        [ 0, sy,  b, 0],
+        [ 0,  0,  c, d],
+        [ 0,  0, -1, 0]])
  
 
 def translate(xyz):
     x, y, z = xyz
-    return np.array([[1, 0, 0, x],
-                     [0, 1, 0, y],
-                     [0, 0, 1, z],
-                     [0, 0, 0, 1]])
+    return np.array([
+        [1, 0, 0, x],
+        [0, 1, 0, y],
+        [0, 0, 1, z],
+        [0, 0, 0, 1]])
 
 
 def scale(xyz):
     x, y, z = xyz
-    return np.matrix([[x,0,0,0],
-                      [0,y,0,0],
-                      [0,0,z,0],
-                      [0,0,0,1]])
+    return np.matrix([
+        [x, 0, 0, 0],  # pylint: disable=bad-whitespace
+        [0, y, 0, 0],  # pylint: disable=bad-whitespace
+        [0, 0, z, 0],  # pylint: disable=bad-whitespace
+        [0, 0, 0, 1]]) # pylint: disable=bad-whitespace
 
  
 def rotate(a, xyz):
