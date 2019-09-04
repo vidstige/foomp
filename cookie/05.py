@@ -37,9 +37,9 @@ def transform(matrix: np.array, vertices: np.array) -> np.array:
 
 
 def camera(t: float) -> np.array:
-    a = t * 1
+    a = t * 0.5
     target = np.array([0, 0, 0])
-    eye = np.array([math.cos(a), math.sin(a), 0]) * 8
+    eye = np.array([math.cos(a), math.sin(a), 0]) * 5
     up = np.array([0, 0, 1])
     return numgl.lookat(eye, target, up)
 
