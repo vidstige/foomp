@@ -76,9 +76,9 @@ class Storm:
     def __init__(self):
         self.dots = np.random.randn(100, 3)
         self.t = 0
-        #self.field = swirl
+        self.field = swirl
         #self.field = partial(towards, target=np.zeros((3,)))
-        self.field = partial(constant, direction=np.array([0, 0, -1]))
+        #self.field = partial(constant, direction=np.array([0, 0, -1]))
 
     def velocity(self, dots, t):
         del t
@@ -90,14 +90,14 @@ class Storm:
         t = self.t
 
         # euler
-        self.dots = x + f(x, t) * dt
+        #self.dots = x + f(x, t) * dt
 
         # runge-kutta 4
-        #k1 = dt * f(x, t)
-        #k2 = dt * f(x + 0.5 * k1, t + 0.5 * dt)
-        #k3 = dt * f(x + 0.5 * k2, t + 0.5 * dt)
-        #k4 = dt * f(x + k3, t + dt)
-        #self.dots = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6
+        k1 = dt * f(x, t)
+        k2 = dt * f(x + 0.5 * k1, t + 0.5 * dt)
+        k3 = dt * f(x + 0.5 * k2, t + 0.5 * dt)
+        k4 = dt * f(x + k3, t + dt)
+        self.dots = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6
 
         self.t += dt
 

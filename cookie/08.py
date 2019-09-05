@@ -26,22 +26,22 @@ def draw(target: cairo.ImageSurface, t: float) -> None:
     ctx.translate(0, h)
     ctx.scale(w, -h)
 
-    f = LinearIn(1)
+    #f = LinearIn(1)
     #f = QuadraticIn(1)
-    #f = Tween(
-    #    QuadraticOut(2),
-    #    Low(1),
-    #    QuadraticIn(3)
-    #)
+    f = Tween(
+        QuadraticOut(2),
+        Low(1),
+        QuadraticIn(3)
+    )
 
-    #ctx.move_to(0, f(0))
-    #for x in np.linspace(0, 1, 64):
-    #    y = f(x * f.duration())
-    #    ctx.line_to(x, y)
-    #ctx.stroke()
+    ctx.move_to(0, f(0))
+    for x in np.linspace(0, 1, 64):
+        y = f(x * f.duration())
+        ctx.line_to(x, y)
+    ctx.stroke()
 
     r = 0.05
-    x, y = 0.5, f(t)
+    x, y = t / f.duration(), f(t)
     ctx.move_to(x, y)
     ctx.arc(x, y, r, 0, TAU)
     ctx.fill()

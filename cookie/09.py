@@ -54,8 +54,8 @@ def transform(matrix: np.array, vertices: np.array) -> np.array:
 
 
 def camera(t: float) -> np.array:
-    #a = t * 0.2
-    a = 0
+    a = t * 0.2
+    #a = 0
     zpan = 0.05
     target = np.array([0, 0, zpan])
     eye = np.array([math.cos(a), math.sin(a), 0.2 + zpan]) * 0.6

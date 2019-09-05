@@ -74,8 +74,8 @@ def transform(matrix: np.array, vertices: np.array) -> np.array:
 
 
 def camera(t: float) -> np.array:
-    #a = t * 0.2
-    a = 0
+    a = t * 0.2
+    #a = 0
     z_pan = 0.05
     target = np.array([0, 0, z_pan])
     eye = np.array([math.cos(a), math.sin(a), 0.2 + z_pan]) * 0.6
@@ -98,6 +98,7 @@ def draw_vectorfield(
 class Storm:
     def __init__(self):
         feet = load_data('498427efb606b127a8adcc7027a84672e6b3d364a5556c8c6e94a77a2f794a34')
+        print(feet.size, file=sys.stderr)
         feet = feet[::4]  # take every other row
 
         rnd = np.random.randn(*feet.shape)
@@ -166,7 +167,7 @@ class Storm:
 
         points = transform(projection, self.dots)
         field = partial(self.velocity, t=self.t)
-        draw_vectorfield(ctx, projection, self.dots, field)
+        #draw_vectorfield(ctx, projection, self.dots, field)
 
         r = 0.01
         for x, y, _ in points:

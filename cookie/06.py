@@ -90,8 +90,8 @@ def draw(target: cairo.ImageSurface, t: float) -> None:
 
     points = transform(projection, dots)
     #field = partial(constant, direction=np.array([0, 0, -1]))
-    field = partial(towards, target=np.zeros((3,)))
-    #field = swirl
+    #field = partial(towards, target=np.zeros((3,)))
+    field = swirl
     draw_vectorfield(ctx, projection, dots, field)
 
     r = 0.05
