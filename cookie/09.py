@@ -15,24 +15,6 @@ import numgl
 TAU = 2 * math.pi
 
 
-def load_data(reconstruction_urnhash: str) -> np.array:
-    with open('data/{}/scene.json'.format(reconstruction_urnhash)) as f:
-        scene = json.load(f)
-    left_transform = np.array(scene['world_from_foot']['left'])
-    right_transform = np.array(scene['world_from_foot']['right'])
-
-    filename = 'data/{}/left.obj'.format(reconstruction_urnhash)
-    left = wavefront.Model.load_obj(filename)
-
-    filename = 'data/{}/right.obj'.format(reconstruction_urnhash)
-    right = wavefront.Model.load_obj(filename)
-
-    return np.vstack([
-        transform(left_transform, left.vertices),
-        transform(right_transform, right.vertices),
-    ])
-
-
 def clear(target: cairo.ImageSurface, color=(1, 1, 1)) -> None:
     ctx = cairo.Context(target)
     r, g, b = color
@@ -54,8 +36,6 @@ def swirl(p: np.array, strength=1) -> np.array:
         np.zeros(zz.shape)]).T
     lengths = np.linalg.norm(p, axis=-1)[:, None]
     return around / (0.2 + 2*lengths)
-
-
 
 
 def extend(vertices: np.array) -> np.array:
@@ -106,14 +86,13 @@ class Storm:
         cloud[cloud[:, 2] < 0, 2] = -cloud[cloud[:, 2] < 0, 2]
 
         self.tweens = [
-            (partial(towards, target=cloud, strength=0.01), tween.Tween(
-                tween.Low(5),
-                tween.LinearIn(5),
-                tween.High(10)
-                )
+            (partial(towards, target=cloud, strength=0.2), tween.Tween(
+                tween.LinearOut(10),
+                tween.LinearIn(10))
             ),
             (partial(swirl, strength=0.2), tween.Tween(
-                tween.High(500))
+                tween.LinearIn(10),
+                tween.High(10))
             )
         ]
         self.dots = resting
@@ -123,19 +102,19 @@ class Storm:
         return sum(tween(t) * field(positions) for field, tween in self.tweens)
 
     def step(self, dt: float) -> None:
-        x = self.dots
-        f = self.velocity
-        t = self.t
+        #x = self.dots
+        #f = self.velocity
+        #t = self.t
 
         # euler
         #self.dots = x + f(x, t) * dt
 
         # runge-kutta 4
-        k1 = dt * f(x, t)
-        k2 = dt * f(x + 0.5 * k1, t + 0.5 * dt)
-        k3 = dt * f(x + 0.5 * k2, t + 0.5 * dt)
-        k4 = dt * f(x + k3, t + dt)
-        self.dots = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6
+        #k1 = dt * f(x, t)
+        #k2 = dt * f(x + 0.5 * k1, t + 0.5 * dt)
+        #k3 = dt * f(x + 0.5 * k2, t + 0.5 * dt)
+        #k4 = dt * f(x + k3, t + dt)
+        #self.dots = x + (k1 + 2 * k2 + 2 * k3 + k4) / 6
 
         self.t += dt
 

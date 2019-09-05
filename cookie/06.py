@@ -57,7 +57,7 @@ def transform(matrix: np.array, vertices: np.array) -> np.array:
 def camera(t: float) -> np.array:
     a = t * 0.2
     target = np.array([0, 0, 0])
-    eye = np.array([math.cos(a), math.sin(a), 0.5]) * 4
+    eye = np.array([math.cos(a), math.sin(a), 0.5]) * 3
     up = np.array([0, 0, 1])
     return numgl.lookat(eye, target, up)
 
@@ -89,9 +89,9 @@ def draw(target: cairo.ImageSurface, t: float) -> None:
         camera(t))
 
     points = transform(projection, dots)
-    field = swirl
-    #field = partial(towards, target=np.zeros((3,)))
     #field = partial(constant, direction=np.array([0, 0, -1]))
+    field = partial(towards, target=np.zeros((3,)))
+    #field = swirl
     draw_vectorfield(ctx, projection, dots, field)
 
     r = 0.05

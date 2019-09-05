@@ -26,8 +26,15 @@ def reverse(f: Callable[[float], float]) -> Callable[[float], float]:
 
 class Segment:
     def __init__(self, duration: float, f: Callable[[float], float]):
-        self.duration = duration
+        self._duration = duration
         self.tween = f
+
+    def duration(self):
+        return self._duration
+
+    def __call__(self, t: float):
+        return self.tween(t / self.duration())
+
 
 class LinearIn(Segment):
     def __init__(self, duration: float):
@@ -60,11 +67,13 @@ class SinInOut(Segment):
             duration=duration,
             f=sin_inout)
 
+
 class QuadraticIn(Segment):
     def __init__(self, duration: float):
         super().__init__(
             duration=duration,
             f=quadratic)
+
 
 class QuadraticOut(Segment):
     def __init__(self, duration: float):
@@ -83,9 +92,9 @@ class Tween:
 
         start = 0
         for segment in self.segments:
-            stop = start + segment.duration
+            stop = start + segment.duration()
             if t >= start and t < stop:
-                return segment, (t - start) / segment.duration
+                return segment, (t - start) / segment.duration()
 
             start = stop
 
@@ -96,4 +105,4 @@ class Tween:
         return segment.tween(normalized_t)
 
     def duration(self) -> float:
-        return sum(segment.duration for segment in self.segments)
+        return sum(segment.duration() for segment in self.segments)
